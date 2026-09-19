@@ -177,33 +177,63 @@ class _ImageBillConfirmPageState extends ConsumerState<ImageBillConfirmPage> {
       }
     }
 
-    // ③ 全额退款配对（去掉退款后缀后商户名相同 + 金额一致 + 一出一入）
-    String baseName(String x) => x
-        .replaceAll(RegExp(r'[-—]?(退款|退货|refund)', caseSensitive: false), '')
-        .trim();
-    for (var i = 0; i < _bills.length; i++) {
-      final ai = (_bills[i].amount ?? 0).abs();
-      if (ai == 0) continue;
-      for (var j = i + 1; j < _bills.length; j++) {
-        final bj = (_bills[j].amount ?? 0).abs();
-        if ((ai - bj).abs() > 0.001) continue;
-        final ni = baseName(_bills[i].note ?? '');
-        final nj = baseName(_bills[j].note ?? '');
-        if (ni.isEmpty || nj.isEmpty || ni != nj) continue;
-        final ti = _bills[i].type, tj = _bills[j].type;
-        final opposite = (ti == BillType.expense && tj == BillType.income) ||
-            (ti == BillType.income && tj == BillType.expense);
-        if (opposite) {
-          _flags[i].add('可抵消');
-          _flags[j].add('可抵消');
-          _checked[i] = false; // skill：两笔均不记录（可手动勾回）
-          _checked[j] = false;
-        }
-      }
+    // ③ 退款配对（skill：退款应与前面那笔正向记录互相抵消）
+    //    条件：金额一致 + 一出一入 + 时间在窗口内；同名商户优先，其次取时间最近的。
+    //    找不到对应正向记录 → 【必须明确问用户】（不猜、不乱归分类）。
+    final win = (skill.flow['dedupeWindowDays'] as int?) ?? 3;
+    bool isRefundRow(int i) {
+      final note = _bills[i].note ?? '';
+      return _bills[i].type == BillType.income &&
+          sr.refundKeywords.any((k) => note.contains(k));
     }
 
+    String baseName(String x) => x
+        .replaceAll(RegExp(r'[-—]?(退款|退货|refund)', caseSensitive: false), '')
+        .replaceAll(RegExp(r'[-—\s]+$'), '')
+        .trim();
+
+    for (var i = 0; i < _bills.length; i++) {
+      if (!isRefundRow(i)) continue;
+      final amt = (_bills[i].amount ?? 0).abs();
+      if (amt == 0) continue;
+      final ti = _bills[i].time;
+      final ni = baseName(_bills[i].note ?? '');
+
+      int? bestJ;
+      var bestName = false;
+      var bestGap = 1 << 30;
+      for (var j = 0; j < _bills.length; j++) {
+        if (j == i) continue;
+        if (_bills[j].type != BillType.expense) continue;
+        if (((_bills[j].amount ?? 0).abs() - amt).abs() > 0.001) continue;
+        final tj = _bills[j].time;
+        final gap = (ti != null && tj != null)
+            ? ti.difference(tj).inMinutes.abs()
+            : 0;
+        if (gap > win * 24 * 60) continue;
+        final nameHit = ni.isNotEmpty && ni == baseName(_bills[j].note ?? '');
+        // 同名优先；否则取时间最近
+        final better = bestJ == null ||
+            (nameHit && !bestName) ||
+            (nameHit == bestName && gap < bestGap);
+        if (better) {
+          bestJ = j;
+          bestName = nameHit;
+          bestGap = gap;
+        }
+      }
+
+      if (bestJ != null) {
+        _flags[i].add('可抵消');
+        _flags[bestJ].add('可抵消');
+        _checked[i] = false; // skill：两笔均不记录（可手动勾回）
+        _checked[bestJ] = false;
+      } else {
+        // 配不上正向记录 → 必须让用户明确处理
+        _flags[i].add('需确认');
+      }
+    }
     // ④ 去重：与已有交易比对
-    final win = (skill.flow['dedupeWindowDays'] as int?) ?? 1;
     try {
       for (var i = 0; i < _bills.length; i++) {
         final t = _bills[i].time;
