@@ -612,6 +612,9 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
                           testStatus: _textTestStatus,
                           testError: _textTestError,
                           onTest: _testTextCapability,
+                          suggestions: _isBuiltIn
+                              ? const ['glm-4.7-flash', 'glm-4.7', 'glm-4.6']
+                              : const ['deepseek-flash', 'gpt-4o-mini', 'qwen-plus'],
                         ),
                         const SizedBox(height: 16),
 
@@ -623,6 +626,9 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
                           testStatus: _visionTestStatus,
                           testError: _visionTestError,
                           onTest: _testVisionCapability,
+                          suggestions: _isBuiltIn
+                              ? const ['glm-4.6v-flash', 'glm-4.6v']
+                              : const ['deepseek-flash', 'gpt-4o'],
                         ),
                         const SizedBox(height: 16),
 
@@ -834,6 +840,7 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
     required TestStatus testStatus,
     String? testError,
     required VoidCallback onTest,
+    List<String> suggestions = const [],
   }) {
     final primaryColor = ref.watch(primaryColorProvider);
     final l10n = AppLocalizations.of(context);
@@ -871,6 +878,26 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
           ),
           onChanged: (_) => setState(() {}),
         ),
+        // 常用模型快捷选择（点一下就填进输入框）
+        if (suggestions.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          SizedBox(
+            height: 34,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: suggestions.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 6),
+              itemBuilder: (_, i) {
+                final sug = suggestions[i];
+                return ActionChip(
+                  label: Text(sug, style: const TextStyle(fontSize: 11.5)),
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => setState(() => controller.text = sug),
+                );
+              },
+            ),
+          ),
+        ],
         // 错误信息
         if (testStatus == TestStatus.failed && testError != null) ...[
           const SizedBox(height: 8),
