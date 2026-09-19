@@ -106,10 +106,17 @@ class _ImageBillConfirmPageState extends ConsumerState<ImageBillConfirmPage> {
         _accountNames[a.id] = a.name;
       }
 
-      // 叶子分类（规则字典按叶子名做键）
-      final leaves = categories
-          .where((c) => !categories.any((x) => x.parentId == c.id))
-          .toList();
+      // 按 kind 取「叶子分类」候选（skill 规则要落在对应类型的分类上）
+      List<Category> leavesOf(BillType? t) {
+        final kind = t == BillType.income ? 'income' : 'expense';
+        return categories
+            .where((c) =>
+                c.kind == kind &&
+                !categories.any((x) => x.parentId == c.id))
+            .toList();
+      }
+
+      final skill = SkillData.definition;
 
       for (var i = 0; i < _bills.length; i++) {
         final b = _bills[i];
@@ -124,18 +131,39 @@ class _ImageBillConfirmPageState extends ConsumerState<ImageBillConfirmPage> {
           }
         }
 
-        // ② AI 没匹配上 → 跑用户规则字典（商户→分类，patch_rules.js 装入）
+        // ② AI 没匹配上 → 跑 skill 规则（与 bill_creation_service 同一套引擎）
+        //    顺序：merchantRules → platformDefaults → keywordHints
         if (_categoryIds[i] == null) {
           final merchant = (b.note ?? '').trim();
-          if (merchant.isNotEmpty) {
-            final ruleId = CategoryMatcher.smartMatch(
-              merchant: merchant,
-              fullText: merchant,
-              categories: leaves,
-            );
-            if (ruleId != null) {
-              _categoryIds[i] = ruleId;
-              _categorySource[i] = 'rule';
+          final cand = leavesOf(b.type);
+          if (merchant.isNotEmpty && cand.isNotEmpty) {
+            final byRule = SkillMatcher.matchRule(skill.merchantRules, merchant);
+            if (byRule != null && !byRule.manual) {
+              final id = SkillMatcher.resolveCategoryId(
+                  byRule.category, byRule.sub, cand);
+              if (id != null) {
+                _categoryIds[i] = id;
+                _categorySource[i] = 'rule';
+              }
+            }
+            if (_categoryIds[i] == null) {
+              final byPlat =
+                  SkillMatcher.matchRule(skill.platformDefaults, merchant);
+              if (byPlat != null) {
+                final id = SkillMatcher.resolveCategoryId(
+                    byPlat.category, byPlat.sub, cand);
+                if (id != null) {
+                  _categoryIds[i] = id;
+                  _categorySource[i] = 'rule';
+                }
+              }
+            }
+            if (_categoryIds[i] == null) {
+              final byKw = SkillMatcher.matchKeywordHint(skill, merchant, cand);
+              if (byKw != null) {
+                _categoryIds[i] = byKw;
+                _categorySource[i] = 'rule';
+              }
             }
           }
         }
@@ -172,8 +200,14 @@ class _ImageBillConfirmPageState extends ConsumerState<ImageBillConfirmPage> {
         }
         _flags[i].add('退款');
       }
-      if (SkillMatcher.matchNeedConfirm(skill, note) != null) {
-        _flags[i].add('需确认');
+      // 需确认清单（skill 例外规则：screenshot 型若已命中商户规则，则跳过本清单）
+      final nc = SkillMatcher.matchNeedConfirm(skill, note);
+      if (nc != null) {
+        final ruleHit =
+            SkillMatcher.matchRule(skill.merchantRules, note) != null;
+        if (!(nc.type == 'screenshot' && ruleHit)) {
+          _flags[i].add('需确认');
+        }
       }
     }
 
@@ -204,7 +238,9 @@ class _ImageBillConfirmPageState extends ConsumerState<ImageBillConfirmPage> {
       var bestGap = 1 << 30;
       for (var j = 0; j < _bills.length; j++) {
         if (j == i) continue;
-        if (_bills[j].type != BillType.expense) continue;
+        // 转出腿：支出，或「转账」（AI 会把"转给对方"标成 transfer）
+        if (_bills[j].type != BillType.expense &&
+            _bills[j].type != BillType.transfer) continue;
         if (((_bills[j].amount ?? 0).abs() - amt).abs() > 0.001) continue;
         final tj = _bills[j].time;
         final gap = (ti != null && tj != null)
