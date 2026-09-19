@@ -92,6 +92,23 @@ ${fallback}`);
   console.log('✅ 已把 skill 匹配链插入分类匹配（优先级高于旧 CategoryMatcher）');
 }
 
+// ---------- 3.5 版本号修正 ----------
+// 上游 pubspec 是 version: 0.0.1（versionCode=1），官方 Release 是 217。
+// 若不修正，fork 的 APK 会被系统判为"降级"而拒绝覆盖安装。
+// 同时保证 fork 后续可正常升级（versionCode 递增）。
+const VERSION_LINE = 'version: 3.8.1+218';
+{
+  const pubPath = path.join(SRC, 'pubspec.yaml');
+  let y0 = fs.readFileSync(pubPath, 'utf8');
+  if (!y0.includes(VERSION_LINE)) {
+    y0 = y0.replace(/^version: .*$/m, VERSION_LINE);
+    fs.writeFileSync(pubPath, y0);
+    console.log('✅ pubspec.yaml 版本号修正 → ' + VERSION_LINE);
+  } else {
+    console.log('⏭  pubspec.yaml 版本号已是 ' + VERSION_LINE);
+  }
+}
+
 // ---------- 4. pubspec 注册 asset ----------
 const pub=path.join(SRC,'pubspec.yaml');
 let y=fs.readFileSync(pub,'utf8');
