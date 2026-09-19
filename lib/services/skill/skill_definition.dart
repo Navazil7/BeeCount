@@ -88,6 +88,8 @@ class SpecialRules {
   final bool refundKeepsOriginalCategory;
   final bool fullRefundOffsetEnabled;
   final int fullRefundOffsetWindowDays;
+  /// 全额退款配对的说明（可选，纯文档字段）
+  final String? fullRefundOffsetNote;
 
   const SpecialRules({
     this.refundKeywords = const [],
@@ -95,6 +97,7 @@ class SpecialRules {
     this.refundKeepsOriginalCategory = true,
     this.fullRefundOffsetEnabled = false,
     this.fullRefundOffsetWindowDays = 3,
+    this.fullRefundOffsetNote,
   });
 
   factory SpecialRules.fromJson(Map<String, dynamic> j) {
@@ -108,6 +111,7 @@ class SpecialRules {
           j['refundKeepsOriginalCategory'] as bool? ?? true,
       fullRefundOffsetEnabled: off['enabled'] as bool? ?? false,
       fullRefundOffsetWindowDays: (off['windowDays'] as num?)?.toInt() ?? 3,
+      fullRefundOffsetNote: off['note'] as String?,
     );
   }
 }
