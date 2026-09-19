@@ -409,9 +409,9 @@ class AIProviderManager {
 
     // 读取智谱 GLM 配置（使用正确的 key）
     final glmApiKey = prefs.getString('ai_glm_api_key') ?? '';
-    final glmTextModel = prefs.getString('ai_glm_model') ?? 'glm-4-flash';
-    final glmVisionModel = prefs.getString('ai_glm_vision_model') ?? 'glm-4v-flash';
-    final glmAudioModel = prefs.getString('ai_glm_audio_model') ?? 'glm-4-voice';
+    final glmTextModel = prefs.getString('ai_glm_model') ?? AIConstants.defaultGlmModel;
+    final glmVisionModel = prefs.getString('ai_glm_vision_model') ?? AIConstants.defaultGlmVisionModel;
+    final glmAudioModel = prefs.getString('ai_glm_audio_model') ?? AIConstants.defaultGlmAudioModel;
 
     logger.info(_tag, '迁移智谱配置: apiKey=${glmApiKey.isNotEmpty ? "已配置" : "未配置"}');
 
