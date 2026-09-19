@@ -12,12 +12,16 @@ class MerchantRule {
   final bool manual;
   final String? reason;
 
+  /// 备注（平台默认推测等场景的说明，可选）
+  final String? note;
+
   const MerchantRule({
     required this.pattern,
     this.category,
     this.sub,
     this.manual = false,
     this.reason,
+    this.note,
   });
 
   factory MerchantRule.fromJson(Map<String, dynamic> j) => MerchantRule(
@@ -26,6 +30,7 @@ class MerchantRule {
         sub: j['sub'] as String?,
         manual: j['manual'] as bool? ?? false,
         reason: j['reason'] as String?,
+        note: j['note'] as String?,
       );
 
   bool get isValid => pattern.isNotEmpty;
