@@ -6,6 +6,9 @@ import '../../data/db.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
 import '../../services/billing/category_matcher.dart';
+import '../../data/repositories/base_repository.dart';
+import '../../services/skill/skill_data.dart';
+import '../../services/skill/skill_matcher.dart';
 import '../../providers/ai_chat_providers.dart';
 import '../../utils/category_utils.dart';
 import '../../widgets/biz/account_picker.dart';
@@ -61,6 +64,9 @@ class _ImageBillConfirmPageState extends ConsumerState<ImageBillConfirmPage> {
   /// 每笔分类的来源：ai / rule / manual / none（用于界面提示）
   late List<String> _categorySource;
 
+  /// 每笔的特殊标记（来自 skill 的特殊规则）：需确认 / 可抵消 / 可能重复 / 退款
+  late List<Set<String>> _flags;
+
   /// 分类 id → 名称
   Map<int, String> _categoryNames = {};
 
@@ -78,6 +84,7 @@ class _ImageBillConfirmPageState extends ConsumerState<ImageBillConfirmPage> {
     _categoryIds = List<int?>.filled(_bills.length, null);
     _accountIds = List<int?>.filled(_bills.length, null);
     _categorySource = List<String>.filled(_bills.length, 'none');
+    _flags = List<Set<String>>.generate(_bills.length, (_) => <String>{});
     _resolveDefaults();
   }
 
@@ -142,7 +149,83 @@ class _ImageBillConfirmPageState extends ConsumerState<ImageBillConfirmPage> {
     } catch (_) {
       // 解析失败不阻塞确认流程，用户手动选即可
     }
+    await _applySpecialRules(repo);
     if (mounted) setState(() => _loading = false);
+  }
+
+  /// 应用 skill 的特殊规则（参数全部来自 skill_data.dart，代码只是解释器）：
+  ///  ① 退款/退货 → 类型改「收入」（分类保持）
+  ///  ② 需确认清单（question 型）→ 打标记，保存前一次性询问
+  ///  ③ 全额退款配对 → 同商户且金额一致的一出一入，两笔都标「可抵消」并默认不记
+  ///  ④ 去重 → 与库中已有交易比对（±N 天、同金额、同类型），标「可能重复」并默认不记
+  Future<void> _applySpecialRules(BaseRepository repo) async {
+    final skill = SkillData.definition;
+    final sr = skill.specialRules;
+
+    // ① 退款/退货 → 收入；② 需确认清单
+    for (var i = 0; i < _bills.length; i++) {
+      final note = (_bills[i].note ?? '').trim();
+      if (note.isEmpty) continue;
+      if (sr.refundKeywords.any((k) => note.contains(k))) {
+        if (_bills[i].type != BillType.income) {
+          _bills[i] = _bills[i].copyWith(type: BillType.income);
+        }
+        _flags[i].add('退款');
+      }
+      if (SkillMatcher.matchNeedConfirm(skill, note) != null) {
+        _flags[i].add('需确认');
+      }
+    }
+
+    // ③ 全额退款配对（去掉退款后缀后商户名相同 + 金额一致 + 一出一入）
+    String baseName(String x) => x
+        .replaceAll(RegExp(r'[-—]?(退款|退货|refund)', caseSensitive: false), '')
+        .trim();
+    for (var i = 0; i < _bills.length; i++) {
+      final ai = (_bills[i].amount ?? 0).abs();
+      if (ai == 0) continue;
+      for (var j = i + 1; j < _bills.length; j++) {
+        final bj = (_bills[j].amount ?? 0).abs();
+        if ((ai - bj).abs() > 0.001) continue;
+        final ni = baseName(_bills[i].note ?? '');
+        final nj = baseName(_bills[j].note ?? '');
+        if (ni.isEmpty || nj.isEmpty || ni != nj) continue;
+        final ti = _bills[i].type, tj = _bills[j].type;
+        final opposite = (ti == BillType.expense && tj == BillType.income) ||
+            (ti == BillType.income && tj == BillType.expense);
+        if (opposite) {
+          _flags[i].add('可抵消');
+          _flags[j].add('可抵消');
+          _checked[i] = false; // skill：两笔均不记录（可手动勾回）
+          _checked[j] = false;
+        }
+      }
+    }
+
+    // ④ 去重：与已有交易比对
+    final win = (skill.flow['dedupeWindowDays'] as int?) ?? 1;
+    try {
+      for (var i = 0; i < _bills.length; i++) {
+        final t = _bills[i].time;
+        final amt = (_bills[i].amount ?? 0).abs();
+        if (t == null || amt == 0) continue;
+        final rows = await repo.getTransactionsByLedgerInRange(
+          ledgerId: widget.ledgerId,
+          start: t.subtract(Duration(days: win)),
+          end: t.add(Duration(days: win)),
+        );
+        final wantType =
+            _bills[i].type == BillType.income ? 'income' : 'expense';
+        final dup = (rows as List).any((tx) =>
+            (tx.amount as num).abs().toDouble() == amt && tx.type == wantType);
+        if (dup) {
+          _flags[i].add('可能重复');
+          _checked[i] = false; // 默认不重复入账（可勾回）
+        }
+      }
+    } catch (_) {
+      // 去重失败不影响主流程
+    }
   }
 
   /// 勾选项里还有几笔没定分类
@@ -206,6 +289,45 @@ class _ImageBillConfirmPageState extends ConsumerState<ImageBillConfirmPage> {
   }
 
   Future<void> _onConfirm() async {
+    // 【skill 需确认清单】保存前把待确认项一次性列出
+    final toConfirm = <int>[];
+    for (var i = 0; i < _bills.length; i++) {
+      if (_checked[i] && _flags[i].contains('需确认')) toConfirm.add(i);
+    }
+    if (toConfirm.isNotEmpty) {
+      final shown = toConfirm.take(3).map((i) {
+        final b = _bills[i];
+        final amt = b.amount?.toStringAsFixed(2) ?? '';
+        return '· ' + (b.note ?? '') + '  ' + amt;
+      }).join('\n');
+      final more = toConfirm.length > 3
+          ? '…共 ' + toConfirm.length.toString() + ' 笔\n\n'
+          : '';
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (dctx) => AlertDialog(
+          title: const Text('以下账单需要你确认用途'),
+          content: Text(shown +
+              '\n\n' +
+              more +
+              '这些商户（如亲属卡/群红包）无法自动判断分类。\n'
+              '可返回逐笔选择分类，或直接保存（将记为「其它」）。'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dctx, false),
+              child: const Text('返回逐笔处理'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dctx, true),
+              child: const Text('继续保存'),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+      if (!mounted) return;
+    }
+
     // 有未选分类时先确认一次（这些会按兜底"其它"入账）
     if (_missingCategoryCount > 0) {
       final ok = await showDialog<bool>(
@@ -394,6 +516,42 @@ class _ImageBillConfirmPageState extends ConsumerState<ImageBillConfirmPage> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontSize: 12.5),
+                      ),
+                    ),
+                  if (_flags[i].isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Wrap(
+                        spacing: 6,
+                        children: _flags[i].map((f) {
+                          final isConfirm = f == '需确认';
+                          final isOffset = f == '可抵消';
+                          final isDup = f == '可能重复';
+                          final color = isConfirm
+                              ? Colors.orange
+                              : isOffset
+                                  ? Colors.purple
+                                  : isDup
+                                      ? Colors.red
+                                      : Colors.blue;
+                          final label = isConfirm
+                              ? '❓需确认'
+                              : isOffset
+                                  ? '⇄可抵消'
+                                  : isDup
+                                      ? '⚠可能重复'
+                                      : f;
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: color.withOpacity(0.13),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(label,
+                                style: const TextStyle(fontSize: 11)),
+                          );
+                        }).toList(),
                       ),
                     ),
                   const SizedBox(height: 6),
