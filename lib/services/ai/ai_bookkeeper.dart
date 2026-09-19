@@ -250,4 +250,47 @@ class AiBookkeeper {
       return bill;
     }
   }
+  // ============================================================
+  // 【二开新增】提取与落库拆开，供「识别 → 人工确认 → 保存」流程使用。
+  // 原生 fromImage/fromText 仍然一步到底，行为完全不变。
+  // ============================================================
+
+  /// 只做「图片 → List<BillInfo>」提取，**不落库**。
+  /// 供图片确认页在入库前展示、编辑识别结果。
+  Future<({List<BillInfo> bills, String? errorMessage})> extractFromImage({
+    required File image,
+    required int ledgerId,
+    String billGuard = '',
+  }) async {
+    try {
+      final context = await AiExtractionContext.forLedger(
+        repository: _repo,
+        ledgerId: ledgerId,
+      );
+      final bills =
+          await _engine.extractFromImage(image, context, billGuard: billGuard);
+      return (bills: bills, errorMessage: null);
+    } catch (e) {
+      logger.error(_tag, 'extractFromImage 失败', e);
+      return (bills: const <BillInfo>[], errorMessage: e.toString());
+    }
+  }
+
+  /// 把一批 [BillInfo] 落库（原 `_persistAll` 转公开）。
+  /// 供确认页在用户点「保存所选」后调用。
+  Future<BookkeepingResult> persistAll({
+    required List<BillInfo> bills,
+    required int ledgerId,
+    required List<String> billingTypes,
+    AppLocalizations? l10n,
+    Future<void> Function(int txId, int index)? onSaved,
+  }) =>
+      _persistAll(
+        bills: bills,
+        ledgerId: ledgerId,
+        billingTypes: billingTypes,
+        l10n: l10n,
+        onSaved: onSaved,
+      );
+
 }
