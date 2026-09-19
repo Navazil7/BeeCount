@@ -238,17 +238,50 @@ class BillCreationService {
   ) async {
     if (categories.isEmpty) return null;
 
+    // ===== 【skill 引擎 · 规则优先】=====
+    // skill 的设计：规则是权威（有序、首个命中即止），AI 只在规则未命中时补充。
+    // 规则数据在 lib/services/skill/skill_data.dart —— 本文件只是解释器。
+    final skill = SkillData.definition;
+
+    // ① merchantRules
+    final byRule = SkillMatcher.matchRule(skill.merchantRules, note);
+    if (byRule != null && !byRule.manual) {
+      final id =
+          SkillMatcher.resolveCategoryId(byRule.category, byRule.sub, categories);
+      if (id != null) {
+        logger.debug(_tag,
+            '[分类匹配-skill规则] "$note" → ${byRule.category}/${byRule.sub ?? ''}');
+        return id;
+      }
+    }
+
+    // ② platformDefaults
+    final byPlatform = SkillMatcher.matchRule(skill.platformDefaults, note);
+    if (byPlatform != null) {
+      final id = SkillMatcher.resolveCategoryId(
+          byPlatform.category, byPlatform.sub, categories);
+      if (id != null) {
+        logger.debug(_tag, '[分类匹配-skill平台] "$note" → ${byPlatform.category}');
+        return id;
+      }
+    }
+
+    // ③ keywordHints
+    final byKeyword = SkillMatcher.matchKeywordHint(skill, note, categories);
+    if (byKeyword != null) {
+      logger.debug(_tag, '[分类匹配-skill关键词] "$note" → ID:$byKeyword');
+      return byKeyword;
+    }
+
+    // ===== 以下为规则未命中时的补充路径 =====
     if (aiCategoryName != null && aiCategoryName.isNotEmpty) {
-      // 完全匹配
       final exact =
           categories.firstWhereOrNull((c) => c.name == aiCategoryName);
       if (exact != null) {
         logger.debug(_tag,
-            '[分类匹配-完全] AI 分类"$aiCategoryName" → ${exact.name}(ID:${exact.id})');
+            '[分类匹配-完全] AI 分类"$aiCategoryName" → ${exact.name}');
         return exact.id;
       }
-
-      // 模糊匹配:分类名包含 AI 名,或 AI 名包含分类名(取匹配长度最长的)
       Category? best;
       var bestScore = 0;
       for (final c in categories) {
@@ -265,45 +298,9 @@ class BillCreationService {
       }
       if (best != null) {
         logger.debug(_tag,
-            '[分类匹配-模糊] AI 分类"$aiCategoryName" → ${best.name}(ID:${best.id})');
+            '[分类匹配-模糊] AI 分类"$aiCategoryName" → ${best.name}');
         return best.id;
       }
-      logger.debug(_tag, '[分类匹配] AI 分类"$aiCategoryName" 未匹配,降级规则匹配');
-    }
-
-    // ===== 【skill 引擎】规则来自 lib/services/skill/skill_data.dart =====
-    // 真相源是 Dart 常量（编译期检查、无 IO、无加载失败路径）。
-    // 导出：tools/skill/extract_from_dart.js（单向序列化，不会漂移）。
-    final skill = SkillData.definition;
-
-    // ① merchantRules：有序正则，首个命中即止
-    final byRule = SkillMatcher.matchRule(skill.merchantRules, note);
-    if (byRule != null && !byRule.manual) {
-      final id = SkillMatcher.resolveCategoryId(
-          byRule.category, byRule.sub, categories);
-      if (id != null) {
-        logger.debug(_tag,
-            '[分类匹配-skill规则] "$note" → ${byRule.category}/${byRule.sub ?? ''} (ID:$id)');
-        return id;
-      }
-    }
-
-    // ② platformDefaults：平台默认推测
-    final byPlatform = SkillMatcher.matchRule(skill.platformDefaults, note);
-    if (byPlatform != null) {
-      final id = SkillMatcher.resolveCategoryId(
-          byPlatform.category, byPlatform.sub, categories);
-      if (id != null) {
-        logger.debug(_tag, '[分类匹配-skill平台] "$note" → ${byPlatform.category}(ID:$id)');
-        return id;
-      }
-    }
-
-    // ③ keywordHints：关键词兜底
-    final byKeyword = SkillMatcher.matchKeywordHint(skill, note, categories);
-    if (byKeyword != null) {
-      logger.debug(_tag, '[分类匹配-skill关键词] "$note" → ID:$byKeyword');
-      return byKeyword;
     }
 
     return CategoryMatcher.smartMatch(
@@ -326,9 +323,11 @@ class BillCreationService {
         return hit.id;
       }
     }
-    final last = categories.last;
-    logger.debug(_tag, '[分类兜底] 使用"${last.name}"(ID:${last.id})');
-    return last.id;
+    // 【fork 修复】兜底不再取最后一个分类。
+    // 原逻辑若该类没有「其它」分类，会把所有未匹配账目归到 categories.last 上
+    // （实测把「京东退款」静默错归成「二手置换」）。宁可留空，也不写错数据。
+    logger.warning(_tag, '[分类兜底] 未找到「其它」类分类,留空等待用户指定');
+    return null;
   }
 
   /// 收入/支出场景的账户匹配。
