@@ -64,6 +64,12 @@ try {
   execFileSync(process.execPath, [path.join(HERE, 'patch_skill_engine.js'), SRC], { stdio: 'inherit' });
 } catch (e) { console.error('skill 引擎补丁失败: ' + e.message); }
 
+// ---------- 3.8 兜底逻辑修复 ----------
+try {
+  const { execFileSync } = require('child_process');
+  execFileSync(process.execPath, [path.join(HERE, 'patch_fixes.js'), SRC], { stdio: 'inherit' });
+} catch (e) { console.error('兜底修复补丁失败: ' + e.message); }
+
 // ---------- 4. 自检 ----------
 const checks = [
   ['lib/pages/ai/image_bill_confirm_page.dart', 'class ImageBillConfirmPage'],
@@ -73,10 +79,10 @@ const checks = [
   ['lib/services/ai/ai_bookkeeper.dart', 'extractFromImage({'],
   ['lib/ai/providers/ai_provider_config.dart', "textModel: 'glm-4.7-flash'"],
   ['lib/ai/providers/ai_provider_config.dart', "visionModel: 'glm-4.6v-flash'"],
-  ['assets/skill/skill.json', '"merchantRules"'],
   ['lib/services/skill/skill_matcher.dart', 'class SkillMatcher'],
-  ['lib/services/billing/bill_creation_service.dart', 'SkillRepository.load()'],
-  ['pubspec.yaml', 'assets/skill/'],
+  ['lib/services/billing/bill_creation_service.dart', 'SkillData.definition'],
+  ['lib/services/skill/skill_data.dart', 'merchantRules'],
+  ['lib/services/billing/bill_creation_service.dart', '【fork 修复】兜底不再取最后一个分类'],
 ];
 let bad = 0;
 for (const [f, needle] of checks) {
