@@ -11,6 +11,7 @@ import '../pages/ai/image_bill_confirm_page.dart';
 import '../providers.dart';
 import '../providers/ai_chat_providers.dart';
 import '../services/attachment_service.dart';
+import '../services/ai/bookkeeping_result.dart';
 import '../services/billing/post_processor.dart';
 import '../services/data/tag_seed_service.dart';
 import '../widgets/ui/ui.dart';
