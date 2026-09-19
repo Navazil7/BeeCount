@@ -70,6 +70,12 @@ try {
   execFileSync(process.execPath, [path.join(HERE, 'patch_fixes.js'), SRC], { stdio: 'inherit' });
 } catch (e) { console.error('兜底修复补丁失败: ' + e.message); }
 
+// ---------- 3.9 所有图片路径都走确认流程 ----------
+try {
+  const { execFileSync } = require('child_process');
+  execFileSync(process.execPath, [path.join(HERE, 'patch_confirm_all.js'), SRC], { stdio: 'inherit' });
+} catch (e) { console.error('确认流程补丁失败: ' + e.message); }
+
 // ---------- 4. 自检 ----------
 const checks = [
   ['lib/pages/ai/image_bill_confirm_page.dart', 'class ImageBillConfirmPage'],
@@ -83,6 +89,8 @@ const checks = [
   ['lib/services/billing/bill_creation_service.dart', 'SkillData.definition'],
   ['lib/services/skill/skill_data.dart', 'merchantRules'],
   ['lib/services/billing/bill_creation_service.dart', '【fork 修复】兜底不再取最后一个分类'],
+  ['lib/services/automation/auto_billing_service.dart', 'ImageBillConfirmPage('],
+  ['lib/pages/ai/image_bill_confirm_page.dart', 'isRefundRow('],
 ];
 let bad = 0;
 for (const [f, needle] of checks) {
