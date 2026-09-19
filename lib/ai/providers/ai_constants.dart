@@ -29,10 +29,10 @@ class AIConstants {
 
   // 默认模型
   /// 默认文本模型
-  static const String defaultGlmModel = 'glm-4-flash';
+  static const String defaultGlmModel = 'glm-4.7-flash';
 
   /// 默认视觉模型
-  static const String defaultGlmVisionModel = 'glm-4v-flash';
+  static const String defaultGlmVisionModel = 'glm-4.6v-flash';
 
   /// 默认语音模型（GLM 暂不支持语音转文字接口）
   static const String defaultGlmAudioModel = 'glm-4-voice';
@@ -43,14 +43,17 @@ class AIConstants {
   // GLM 可选模型列表（简化版，与旧版一致）
   /// 文本模型列表
   static const List<String> glmTextModels = [
-    'glm-4-flash',
+    'glm-4.7-flash',
+    'glm-4.7',
     'glm-4.6',
+    'glm-4-flash',
   ];
 
   /// 视觉模型列表
   static const List<String> glmVisionModels = [
-    'glm-4v-flash',
+    'glm-4.6v-flash',
     'glm-4.6v',
+    'glm-4v-flash',
   ];
 
   /// 语音模型列表
@@ -65,13 +68,19 @@ class AIConstants {
 
     switch (modelId) {
       // 文本模型
+      case 'glm-4.7-flash':
+        return 'GLM-4.7-Flash（免费·200K）';
+      case 'glm-4.7':
+        return 'GLM-4.7（$accurate）';
       case 'glm-4-flash':
-        return 'GLM-4-Flash（$fast）';
+        return 'GLM-4-Flash（旧·128K）';
       case 'glm-4.6':
         return 'GLM-4.6（$accurate）';
       // 视觉模型
+      case 'glm-4.6v-flash':
+        return 'GLM-4.6V-Flash（免费·128K）';
       case 'glm-4v-flash':
-        return 'GLM-4V-Flash（$fast）';
+        return 'GLM-4V-Flash（旧·仅4K）';
       case 'glm-4.6v':
         return 'GLM-4.6V（$accurate）';
       // 语音模型
