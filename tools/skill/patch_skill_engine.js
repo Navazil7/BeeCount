@@ -43,48 +43,109 @@ if(s.includes('SkillData.definition')){
   }
   console.log('✅ 已加 import');
 
-  const fallback=`    return CategoryMatcher.smartMatch(
-      merchant: note,
-      fullText: note,
-      categories: categories,
-    );`;
-  if(!s.includes(fallback)){ console.error('❌ 找不到 CategoryMatcher 兜底锚点'); process.exit(1); }
-  s=s.replace(fallback, `    // ===== 【skill 引擎】规则来自 lib/services/skill/skill_data.dart =====
-    // 真相源是 Dart 常量（编译期检查、无 IO、无加载失败路径）。
-    // 导出：tools/skill/extract_from_dart.js（单向序列化，不会漂移）。
-    final skill = SkillData.definition;
+  // 用「整体替换 _matchCategory 方法」的方式，保证 skill 规则【优先于】AI 猜测。
+  // skill 的设计：规则是权威、首个命中即止；AI 只在规则未命中时补充。
+  const origMethod = `  Future<int?> _matchCategory(
+    String? aiCategoryName,
+    String note,
+    List<Category> categories,
+  ) async {`;
+  const mi = s.indexOf(origMethod);
+  if (mi < 0) {
+    console.error('❌ 找不到 _matchCategory 方法');
+    process.exit(1);
+  }
+  // 找到方法结束（行首两个空格的右花括号）
+  const endRe = /\n  \}\n/;
+  const rest = s.slice(mi);
+  const em = endRe.exec(rest);
+  if (!em) { console.error('❌ 找不到方法结束'); process.exit(1); }
+  const methodEnd = mi + em.index + em[0].length;
 
-    // ① merchantRules：有序正则，首个命中即止
-    final byRule = SkillMatcher.matchRule(skill.merchantRules, note);
-    if (byRule != null && !byRule.manual) {
-      final id = SkillMatcher.resolveCategoryId(
-          byRule.category, byRule.sub, categories);
-      if (id != null) {
-        logger.debug(_tag,
-            '[分类匹配-skill规则] "$note" → \${byRule.category}/\${byRule.sub ?? ''} (ID:\$id)');
-        return id;
-      }
-    }
+  const newMethod = [
+    '  Future<int?> _matchCategory(',
+    '    String? aiCategoryName,',
+    '    String note,',
+    '    List<Category> categories,',
+    '  ) async {',
+    '    if (categories.isEmpty) return null;',
+    '',
+    '    // ===== 【skill 引擎 · 规则优先】=====',
+    '    // skill 的设计：规则是权威（有序、首个命中即止），AI 只在规则未命中时补充。',
+    '    // 规则数据在 lib/services/skill/skill_data.dart —— 本文件只是解释器。',
+    '    final skill = SkillData.definition;',
+    '',
+    '    // ① merchantRules',
+    '    final byRule = SkillMatcher.matchRule(skill.merchantRules, note);',
+    '    if (byRule != null && !byRule.manual) {',
+    '      final id =',
+    '          SkillMatcher.resolveCategoryId(byRule.category, byRule.sub, categories);',
+    '      if (id != null) {',
+    '        logger.debug(_tag,',
+    '            \'[分类匹配-skill规则] "$note" → ${byRule.category}/${byRule.sub ?? \'\'}\');',
+    '        return id;',
+    '      }',
+    '    }',
+    '',
+    '    // ② platformDefaults',
+    '    final byPlatform = SkillMatcher.matchRule(skill.platformDefaults, note);',
+    '    if (byPlatform != null) {',
+    '      final id = SkillMatcher.resolveCategoryId(',
+    '          byPlatform.category, byPlatform.sub, categories);',
+    '      if (id != null) {',
+    '        logger.debug(_tag, \'[分类匹配-skill平台] "$note" → ${byPlatform.category}\');',
+    '        return id;',
+    '      }',
+    '    }',
+    '',
+    '    // ③ keywordHints',
+    '    final byKeyword = SkillMatcher.matchKeywordHint(skill, note, categories);',
+    '    if (byKeyword != null) {',
+    '      logger.debug(_tag, \'[分类匹配-skill关键词] "$note" → ID:$byKeyword\');',
+    '      return byKeyword;',
+    '    }',
+    '',
+    '    // ===== 以下为规则未命中时的补充路径 =====',
+    '    if (aiCategoryName != null && aiCategoryName.isNotEmpty) {',
+    '      final exact =',
+    '          categories.firstWhereOrNull((c) => c.name == aiCategoryName);',
+    '      if (exact != null) {',
+    '        logger.debug(_tag,',
+    '            \'[分类匹配-完全] AI 分类"$aiCategoryName" → ${exact.name}\');',
+    '        return exact.id;',
+    '      }',
+    '      Category? best;',
+    '      var bestScore = 0;',
+    '      for (final c in categories) {',
+    '        var score = 0;',
+    '        if (c.name.contains(aiCategoryName)) {',
+    '          score = aiCategoryName.length;',
+    '        } else if (aiCategoryName.contains(c.name)) {',
+    '          score = c.name.length;',
+    '        }',
+    '        if (score > bestScore) {',
+    '          bestScore = score;',
+    '          best = c;',
+    '        }',
+    '      }',
+    '      if (best != null) {',
+    '        logger.debug(_tag,',
+    '            \'[分类匹配-模糊] AI 分类"$aiCategoryName" → ${best.name}\');',
+    '        return best.id;',
+    '      }',
+    '    }',
+    '',
+    '    return CategoryMatcher.smartMatch(',
+    '      merchant: note,',
+    '      fullText: note,',
+    '      categories: categories,',
+    '    );',
+    '  }',
+    '',
+  ].join('\n');
 
-    // ② platformDefaults：平台默认推测
-    final byPlatform = SkillMatcher.matchRule(skill.platformDefaults, note);
-    if (byPlatform != null) {
-      final id = SkillMatcher.resolveCategoryId(
-          byPlatform.category, byPlatform.sub, categories);
-      if (id != null) {
-        logger.debug(_tag, '[分类匹配-skill平台] "$note" → \${byPlatform.category}(ID:\$id)');
-        return id;
-      }
-    }
-
-    // ③ keywordHints：关键词兜底
-    final byKeyword = SkillMatcher.matchKeywordHint(skill, note, categories);
-    if (byKeyword != null) {
-      logger.debug(_tag, '[分类匹配-skill关键词] "$note" → ID:\$byKeyword');
-      return byKeyword;
-    }
-
-${fallback}`);
+  s = s.slice(0, mi) + newMethod + s.slice(methodEnd);
+  console.log('✅ 已重排匹配链：skill 规则优先于 AI 猜测');
   fs.writeFileSync(bcs,s);
   console.log('✅ 已把 skill 匹配链插入分类匹配（无 IO，直接读常量）');
 }
