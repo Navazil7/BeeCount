@@ -20,6 +20,11 @@ fs.mkdirSync(skillDir,{recursive:true});
 for(const f of ['skill_definition.dart','skill_data.dart','skill_matcher.dart']){
   fs.copyFileSync(path.join(HERE,'skill_dart',f), path.join(skillDir,f));
 }
+// 一致性自检：skill_data.dart 用到的命名参数必须在 skill_definition.dart 里存在
+{
+  const { execFileSync } = require('child_process');
+  execFileSync(process.execPath, [path.join(HERE,'skill_dart','verify_consistency.js'), path.join(HERE,'skill_dart')], { stdio: 'inherit' });
+}
 console.log('✅ 新增 lib/services/skill/ 三个文件（含真相源 skill_data.dart）');
 
 // ---------- 2. 接入匹配链 ----------
