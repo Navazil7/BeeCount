@@ -9,6 +9,8 @@ import '../../l10n/app_localizations.dart';
 import '../data/tag_seed_service.dart';
 import '../system/logger_service.dart';
 import 'category_matcher.dart';
+import '../skill/skill_matcher.dart';
+import '../skill/skill_repository.dart';
 
 /// 账单交易创建服务。
 ///
@@ -267,6 +269,40 @@ class BillCreationService {
         return best.id;
       }
       logger.debug(_tag, '[分类匹配] AI 分类"$aiCategoryName" 未匹配,降级规则匹配');
+    }
+
+    // ===== 【skill 引擎】规则来自 assets/skill/skill.json，Dart 侧无业务规则 =====
+    final skill = await SkillRepository.load();
+    if (skill != null) {
+      // ① merchantRules：有序正则，首个命中即止
+      final byRule = SkillMatcher.matchRule(skill.merchantRules, note);
+      if (byRule != null && !byRule.manual) {
+        final id = SkillMatcher.resolveCategoryId(
+            byRule.category, byRule.sub, categories);
+        if (id != null) {
+          logger.debug(_tag,
+              '[分类匹配-skill规则] "$note" → ${byRule.category}/${byRule.sub ?? ''} (ID:$id)');
+          return id;
+        }
+      }
+
+      // ② platformDefaults：平台默认推测
+      final byPlatform = SkillMatcher.matchRule(skill.platformDefaults, note);
+      if (byPlatform != null) {
+        final id = SkillMatcher.resolveCategoryId(
+            byPlatform.category, byPlatform.sub, categories);
+        if (id != null) {
+          logger.debug(_tag, '[分类匹配-skill平台] "$note" → ${byPlatform.category}(ID:$id)');
+          return id;
+        }
+      }
+
+      // ③ keywordHints：关键词兜底
+      final byKeyword = SkillMatcher.matchKeywordHint(skill, note, categories);
+      if (byKeyword != null) {
+        logger.debug(_tag, '[分类匹配-skill关键词] "$note" → ID:$byKeyword');
+        return byKeyword;
+      }
     }
 
     return CategoryMatcher.smartMatch(
