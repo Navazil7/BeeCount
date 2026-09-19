@@ -12,6 +12,8 @@ import '../../providers.dart';
 import '../../providers/ai_chat_providers.dart';
 import '../ai/bookkeeping_result.dart';
 import '../attachment_service.dart';
+import '../../main.dart' show globalNavigatorKey;
+import '../../pages/ai/image_bill_confirm_page.dart';
 import '../billing/post_processor.dart';
 import '../data/tag_seed_service.dart';
 import '../system/logger_service.dart';
@@ -251,41 +253,91 @@ class AutoBillingService {
 
       final autoAddAttachment =
           _container.read(smartBillingAutoAttachmentProvider);
-      final result = await _container.read(aiBookkeeperProvider).fromImage(
+      // 【fork 改造】所有图片识别都必须走 skill 的确认流程 —— 不再直接落库。
+      // 1) 只提取，不入库
+      final extracted =
+          await _container.read(aiBookkeeperProvider).extractFromImage(
         image: file,
         ledgerId: ledgerId,
         billGuard: PromptBuilder.billGuardForImage,
-        billingTypes: const [
-          TagSeedService.billingTypeImage,
-          TagSeedService.billingTypeAi,
-        ],
-        l10n: lookupAppLocalizations(PlatformDispatcher.instance.locale),
-        // 多笔截图(罕见,但 AI 可能识别出一张账单页里的多笔)时,每笔都挂
-        // 同一张原图,与相册路径行为对齐。
-        //
-        // 走 urgent 模式:跳过 FlutterImageCompress(platform channel,后台冻
-        // 结时会卡)和 _getImageInfo,用 sync File.copy 几十 ms 内完成。
-        // 这样 attachment 在 perform() return 前就写完,不依赖用户开 app。
-        onSaved: autoAddAttachment
-            ? (txId, _) async {
-                try {
-                  final attachmentService =
-                      _container.read(attachmentServiceProvider);
-                  await attachmentService.saveAttachment(
-                    transactionId: txId,
-                    sourceFile: file,
-                    index: 0,
-                    urgent: true,
-                  );
-                  _container
-                      .read(attachmentListRefreshProvider.notifier)
-                      .state++;
-                } catch (e, st) {
-                  logger.error('AutoBilling', '保存截图附件失败', e, st);
-                }
-              }
-            : null,
       );
+
+      if (extracted.bills.isEmpty) {
+        logger.info('AutoBilling', 'AI 未识别到账单，不入库');
+        await _markAsProcessed(imagePath);
+        if (showNotification) {
+          final l10n =
+              lookupAppLocalizations(PlatformDispatcher.instance.locale);
+          await _showFinalNotification(
+            progressId: notificationId,
+            finalId: resultNotificationId,
+            title: l10n.autoBillingNotifyNoBillTitle,
+            body: l10n.autoBillingNotifyNoBillBody,
+          );
+        }
+        return null;
+      }
+
+      // 2) 弹确认页（识别结果必须经用户核对后才落库）
+      final nav = globalNavigatorKey.currentState;
+      if (nav == null) {
+        // App 不在前台：不落库，通知引导用户打开 App 再确认
+        logger.warning('AutoBilling', '无可用 Navigator，暂不落库（等待用户确认）');
+        if (showNotification) {
+          final l10n =
+              lookupAppLocalizations(PlatformDispatcher.instance.locale);
+          await _showFinalNotification(
+            progressId: notificationId,
+            finalId: resultNotificationId,
+            title: l10n.autoBillingNotifyNoBillTitle,
+            body: l10n.autoBillingNotifyNoBillBody,
+          );
+        }
+        return null;
+      }
+
+      final autoAddAttachment =
+          _container.read(smartBillingAutoAttachmentProvider);
+      final confirmResult = await nav.push<BookkeepingResult>(
+        MaterialPageRoute(
+          builder: (_) => ImageBillConfirmPage(
+            bills: extracted.bills,
+            ledgerId: ledgerId,
+            billingTypes: const [
+              TagSeedService.billingTypeImage,
+              TagSeedService.billingTypeAi,
+            ],
+            onSaved: autoAddAttachment
+                ? (txId, _) async {
+                    try {
+                      final attachmentService =
+                          _container.read(attachmentServiceProvider);
+                      await attachmentService.saveAttachment(
+                        transactionId: txId,
+                        sourceFile: file,
+                        index: 0,
+                        urgent: true,
+                      );
+                      _container
+                          .read(attachmentListRefreshProvider.notifier)
+                          .state++;
+                    } catch (e, st) {
+                      logger.error('AutoBilling', '保存截图附件失败', e, st);
+                    }
+                  }
+                : null,
+          ),
+        ),
+      );
+
+      await _markAsProcessed(imagePath);
+
+      // 用户取消 → 不入库
+      if (confirmResult == null) {
+        logger.info('AutoBilling', '用户在确认页取消，未落库');
+        return null;
+      }
+      final result = confirmResult;
 
       final aiElapsed = DateTime.now().millisecondsSinceEpoch - aiStartTime;
       logger.info('AutoBilling', 'AI 识别 + 落库完成',
