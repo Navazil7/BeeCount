@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../ai/core/prompt_builder.dart';
@@ -296,8 +297,6 @@ class AutoBillingService {
         return null;
       }
 
-      final autoAddAttachment =
-          _container.read(smartBillingAutoAttachmentProvider);
       final confirmResult = await nav.push<BookkeepingResult>(
         MaterialPageRoute(
           builder: (_) => ImageBillConfirmPage(
