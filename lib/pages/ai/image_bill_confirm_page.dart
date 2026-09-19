@@ -5,6 +5,7 @@ import '../../ai/core/bill_info.dart';
 import '../../data/db.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
+import '../../services/billing/category_matcher.dart';
 import '../../providers/ai_chat_providers.dart';
 import '../../utils/category_utils.dart';
 import '../../widgets/biz/account_picker.dart';
@@ -57,6 +58,9 @@ class _ImageBillConfirmPageState extends ConsumerState<ImageBillConfirmPage> {
   /// 每笔选择的账户 id
   late List<int?> _accountIds;
 
+  /// 每笔分类的来源：ai / rule / manual / none（用于界面提示）
+  late List<String> _categorySource;
+
   /// 分类 id → 名称
   Map<int, String> _categoryNames = {};
 
@@ -73,6 +77,7 @@ class _ImageBillConfirmPageState extends ConsumerState<ImageBillConfirmPage> {
     _checked = List<bool>.filled(_bills.length, true);
     _categoryIds = List<int?>.filled(_bills.length, null);
     _accountIds = List<int?>.filled(_bills.length, null);
+    _categorySource = List<String>.filled(_bills.length, 'none');
     _resolveDefaults();
   }
 
@@ -94,12 +99,41 @@ class _ImageBillConfirmPageState extends ConsumerState<ImageBillConfirmPage> {
         _accountNames[a.id] = a.name;
       }
 
+      // 叶子分类（规则字典按叶子名做键）
+      final leaves = categories
+          .where((c) => !categories.any((x) => x.parentId == c.id))
+          .toList();
+
       for (var i = 0; i < _bills.length; i++) {
         final b = _bills[i];
+
+        // ① 先按 AI 给的分类名找（完全匹配）
         final catName = b.category?.trim();
         if (catName != null && catName.isNotEmpty) {
-          _categoryIds[i] = catByName[catName]?.id;
+          final hit = catByName[catName];
+          if (hit != null) {
+            _categoryIds[i] = hit.id;
+            _categorySource[i] = 'ai';
+          }
         }
+
+        // ② AI 没匹配上 → 跑用户规则字典（商户→分类，patch_rules.js 装入）
+        if (_categoryIds[i] == null) {
+          final merchant = (b.note ?? '').trim();
+          if (merchant.isNotEmpty) {
+            final ruleId = CategoryMatcher.smartMatch(
+              merchant: merchant,
+              fullText: merchant,
+              categories: leaves,
+            );
+            if (ruleId != null) {
+              _categoryIds[i] = ruleId;
+              _categorySource[i] = 'rule';
+            }
+          }
+        }
+
+        // 账户
         final accName = b.account?.trim();
         if (accName != null && accName.isNotEmpty) {
           _accountIds[i] = accByName[accName]?.id;
@@ -143,6 +177,7 @@ class _ImageBillConfirmPageState extends ConsumerState<ImageBillConfirmPage> {
       setState(() {
         _categoryIds[index] = picked.id;
         _categoryNames[picked.id] = picked.name;
+        _categorySource[index] = 'manual';
         _bills[index] = bill.copyWith(category: picked.name);
       });
     }
@@ -171,6 +206,29 @@ class _ImageBillConfirmPageState extends ConsumerState<ImageBillConfirmPage> {
   }
 
   Future<void> _onConfirm() async {
+    // 有未选分类时先确认一次（这些会按兜底"其它"入账）
+    if (_missingCategoryCount > 0) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (dctx) => AlertDialog(
+          title: const Text('还有未选分类的账单'),
+          content: Text('有 ${_missingCategoryCount} 笔没有选择分类，保存后将按兜底分类「其它」入账。\n\n是否继续？'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dctx, false),
+              child: const Text('返回修改'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dctx, true),
+              child: const Text('仍然保存'),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+      if (!mounted) return;
+    }
+
     final selected = <BillInfo>[];
     for (var i = 0; i < _bills.length; i++) {
       if (!_checked[i]) continue;
@@ -206,7 +264,7 @@ class _ImageBillConfirmPageState extends ConsumerState<ImageBillConfirmPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final canSave = !_saving && !_loading && _missingCategoryCount == 0;
+    final canSave = !_saving && !_loading;
 
     return Scaffold(
       appBar: AppBar(
@@ -256,12 +314,14 @@ class _ImageBillConfirmPageState extends ConsumerState<ImageBillConfirmPage> {
     final isIncome = bill.type == BillType.income;
     final amount = (bill.amount ?? 0).abs();
     final catId = _categoryIds[i];
+    final src = _categorySource[i];
     final catName = catId == null
         ? (bill.category?.trim().isNotEmpty == true
-            ? '⚠ ${bill.category}（未匹配）'
+            ? '⚠ ${bill.category}（未匹配，请选择）'
             : '⚠ 请选择分类')
         : (CategoryUtils.getDisplayName(_categoryNames[catId], context,
-            kind: isIncome ? 'income' : 'expense'));
+                kind: isIncome ? 'income' : 'expense') +
+            (src == 'rule' ? '  · 规则' : src == 'ai' ? '  · AI' : ''));
     final accId = _accountIds[i];
     final accName = accId == null ? '未选择账户' : (_accountNames[accId] ?? '未选择账户');
 
@@ -421,7 +481,7 @@ class _ImageBillConfirmPageState extends ConsumerState<ImageBillConfirmPage> {
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        '还有 $missing 笔未选择分类，请先补全',
+                        '还有 $missing 笔未选分类，保存将记为「其它」（可直接保存）',
                         style: TextStyle(
                             fontSize: 12, color: Colors.orange[900]),
                       ),
