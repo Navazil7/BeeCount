@@ -20,6 +20,8 @@ if(s.includes('ImageBillConfirmPage')){
 }
 
 // ---------- 1) 加 import ----------
+s=s.replace("import 'package:flutter_riverpod/flutter_riverpod.dart';",
+  "import 'package:flutter/material.dart';\nimport 'package:flutter_riverpod/flutter_riverpod.dart';");
 s=s.replace("import '../billing/post_processor.dart';",
   "import '../../main.dart' show globalNavigatorKey;\n" +
   "import '../../pages/ai/image_bill_confirm_page.dart';\n" +
@@ -79,8 +81,6 @@ const newBlock = [
 "        return null;",
 "      }",
 "",
-"      final autoAddAttachment =",
-"          _container.read(smartBillingAutoAttachmentProvider);",
 "      final confirmResult = await nav.push<BookkeepingResult>(",
 "        MaterialPageRoute(",
 "          builder: (_) => ImageBillConfirmPage(",
