@@ -46,6 +46,11 @@ class SkillData {
 
   /// 商户规则 —— **顺序即优先级，首个命中即止**
   static const List<MerchantRule> merchantRules = [
+    // ⚠️ 必须排在平台默认之前：否则「美团金融还款」会被当成美团外卖
+    MerchantRule(
+        pattern: "美团金融|金融还款|还款|信用卡还款",
+        category: "其它",
+        note: "信贷还款，非消费"),
     MerchantRule(pattern: "美的领贤", category: "住房", sub: "房租"),
     MerchantRule(pattern: "言己领贤|自己领贤", manual: true, reason: "金额需拆分：固定车位租金 260，余额为汽车-充电（如 300.60 → 260 车位租金 + 40.6 充电）"),
     MerchantRule(pattern: "腾讯计算机系统", category: "娱乐", sub: "QQ音乐"),
@@ -81,6 +86,14 @@ class SkillData {
 
   /// 需确认清单
   static const List<NeedConfirmRule> needConfirm = [
+    NeedConfirmRule(
+        pattern: "还款",
+        type: "question",
+        hint: "信贷/信用卡还款，分类需用户确认"),
+    NeedConfirmRule(
+        pattern: "退款|退货",
+        type: "question",
+        hint: "退款入账，分类需用户确认（skill：与原始支出一致）"),
     NeedConfirmRule(pattern: "亲属卡交易", type: "question", hint: "亲属卡代付，用途需用户口述确认"),
     NeedConfirmRule(pattern: "微信红包-发出群红包", type: "question", hint: "群红包支出，用途/对象需用户确认"),
     NeedConfirmRule(pattern: "美团", type: "screenshot", hint: "需美团账单截图，推测分类后提问确认"),
@@ -130,7 +143,7 @@ class SkillData {
     "过路费": ["ETC", "高速", "收费站"],
     "停车费": ["停车场", "停车"],
     "宠物": ["宠物猫粮", "宠物猫砂"],
-    "下馆子": ["摩登茶记", "白糖塘", "谢记大树烤肉", "CHILL Pho", "大麦穗", "美团点餐", "团购", "火锅", "烤肉", "烧烤", "西贝", "海底捞", "茶记", "Pho", "牛肉粉", "越南粉", "米粉", "面馆", "粉店", "快餐", "小炒", "川菜", "湘菜", "日料", "寿司"],
+    "下馆子": ["摩登茶记", "白糖塘", "谢记大树烤肉", "CHILL Pho", "大麦穗", "美团点餐", "团购", "火锅", "烤肉", "烧烤", "西贝", "海底捞", "茶记", "Pho", "牛肉粉", "越南粉", "米粉", "面馆", "粉店", "快餐", "小炒", "川菜", "湘菜", "日料", "寿司", "炸鸡", "炸串", "麻辣烫", "冒菜", "盖浇饭", "卤味"],
     "理发": ["深圳市致远创想", "美发", "剪发", "tony"],
     "日用品": ["京东", "淘宝", "拼多多", "天猫", "超市", "便利店", "屈臣氏"],
     "午餐": ["食堂", "工作餐"],
