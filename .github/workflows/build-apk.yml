@@ -43,17 +43,28 @@ jobs:
       - name: Build runner (Drift codegen, 必须)
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Analyze (仅报错不阻断，便于看问题)
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings || true
+      # 注意：本项目 android/app/build.gradle 默认开 splits.abi
+      # 且未指定 --flavor 时默认落到 dev 风味(applicationId 带 .dev 后缀)。
+      # 所以这里显式指定 prod，并且不要传 --target-platform（会与 splits 冲突，
+      # 导致 Gradle 产出的文件名与 Flutter 期望的不一致 → "failed to produce an .apk file"）。
+      - name: Build APK (prod, release)
+        run: flutter build apk --release --flavor prod
 
-      - name: Build APK (release, arm64 only to save time)
-        run: flutter build apk --release --target-platform android-arm64
-
-      - name: Rename APK
+      - name: Locate & collect APKs
         run: |
+          set -e
+          echo "=== 构建产物清单 ==="
+          find build/app/outputs -name "*.apk" -printf "%p  (%s bytes)\n" || true
           mkdir -p out
-          cp build/app/outputs/flutter-apk/app-release.apk \
-             out/beecount-fork-${GITHUB_SHA::7}-arm64.apk
+          # 优先取 arm64 拆分产物，其次取 universal，最后兜底任意 apk
+          A64=$(find build/app/outputs -name "*arm64-v8a*release*.apk" | head -1)
+          UNI=$(find build/app/outputs -name "*universal*release*.apk" | head -1)
+          ANY=$(find build/app/outputs -name "*.apk" | head -1)
+          SRC="${A64:-${UNI:-$ANY}}"
+          if [ -z "$SRC" ]; then echo "❌ 没有找到任何 APK"; exit 1; fi
+          echo "选中: $SRC"
+          cp "$SRC" "out/beecount-fork-${GITHUB_SHA::7}-$(basename "$SRC")"
+          ls -la out/
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
