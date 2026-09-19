@@ -5,6 +5,7 @@ import '../../ai/core/bill_info.dart';
 import '../../data/db.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
+import '../../providers/ai_chat_providers.dart';
 import '../../utils/category_utils.dart';
 import '../../widgets/biz/account_picker.dart';
 import '../../widgets/biz/category_selector_dialog.dart';
