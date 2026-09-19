@@ -94,10 +94,14 @@ class _AIModelSelectionPageState extends ConsumerState<AIModelSelectionPage> {
   /// 获取文本模型的显示名称
   String _getModelDisplayName(String modelId, AppLocalizations l10n) {
     switch (modelId) {
+      case 'glm-4.7':
+        return 'GLM-4.7 (${l10n.aiModelAccurate})';
+      case 'glm-4.7-flash':
+        return 'GLM-4.7-Flash（免费·200K）';
       case 'glm-4.6':
-        return 'GLM-4.6 (${l10n.aiModelAccurate})';
+        return 'GLM-4.6 (旧)';
       case 'glm-4-flash':
-        return 'GLM-4-Flash (${l10n.aiModelFast})';
+        return 'GLM-4-Flash (旧·128K)';
       default:
         return modelId;
     }
@@ -108,8 +112,10 @@ class _AIModelSelectionPageState extends ConsumerState<AIModelSelectionPage> {
     switch (modelId) {
       case 'glm-4.6v':
         return 'GLM-4.6V (${l10n.aiModelAccurate})';
+      case 'glm-4.6v-flash':
+        return 'GLM-4.6V-Flash（免费·128K）';
       case 'glm-4v-flash':
-        return 'GLM-4V-Flash (${l10n.aiModelFast})';
+        return 'GLM-4V-Flash (旧·仅4K)';
       default:
         return modelId;
     }
@@ -132,8 +138,17 @@ class _AIModelSelectionPageState extends ConsumerState<AIModelSelectionPage> {
           children: [
             _buildModelDialogOption(
               dialogContext,
-              'glm-4.6',
-              'GLM-4.6',
+              'glm-4.7-flash',
+              'GLM-4.7-Flash',
+              '免费 · 200K 上下文 · 支持 JSON',
+              Icons.bolt,
+              primaryColor,
+              isText: true,
+            ),
+            _buildModelDialogOption(
+              dialogContext,
+              'glm-4.7',
+              'GLM-4.7',
               l10n.aiModelAccurate,
               Icons.psychology,
               primaryColor,
@@ -141,10 +156,19 @@ class _AIModelSelectionPageState extends ConsumerState<AIModelSelectionPage> {
             ),
             _buildModelDialogOption(
               dialogContext,
+              'glm-4.6',
+              'GLM-4.6（旧）',
+              '上一代',
+              Icons.history,
+              primaryColor,
+              isText: true,
+            ),
+            _buildModelDialogOption(
+              dialogContext,
               'glm-4-flash',
-              'GLM-4-Flash',
-              l10n.aiModelFast,
-              Icons.bolt,
+              'GLM-4-Flash（旧）',
+              '上一代 · 128K',
+              Icons.history,
               primaryColor,
               isText: true,
             ),
@@ -177,6 +201,15 @@ class _AIModelSelectionPageState extends ConsumerState<AIModelSelectionPage> {
           children: [
             _buildModelDialogOption(
               dialogContext,
+              'glm-4.6v-flash',
+              'GLM-4.6V-Flash',
+              '免费 · 128K 上下文 · 支持 JSON',
+              Icons.bolt,
+              primaryColor,
+              isText: false,
+            ),
+            _buildModelDialogOption(
+              dialogContext,
               'glm-4.6v',
               'GLM-4.6V',
               l10n.aiModelAccurate,
@@ -187,9 +220,9 @@ class _AIModelSelectionPageState extends ConsumerState<AIModelSelectionPage> {
             _buildModelDialogOption(
               dialogContext,
               'glm-4v-flash',
-              'GLM-4V-Flash',
-              l10n.aiModelFast,
-              Icons.bolt,
+              'GLM-4V-Flash（旧）',
+              '上一代 · 仅 4K 上下文，长图易失败',
+              Icons.history,
               primaryColor,
               isText: false,
             ),
