@@ -47,8 +47,8 @@ class AIServiceProviderConfig {
         name: '智谱GLM',
         isBuiltIn: true,
         baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
-        textModel: 'glm-4-flash',
-        visionModel: 'glm-4v-flash',
+        textModel: 'glm-4.7-flash',
+        visionModel: 'glm-4.6v-flash',
         audioModel: 'glm-4-voice',
         createdAt: DateTime(2024, 1, 1),
       );
