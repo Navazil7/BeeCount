@@ -1016,19 +1016,25 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                       // 导致环形图与列表互斥）。环形图负责"构成占比"，
                       // 列表负责"具体排名与环比"，两者信息不重复。
                       if (_type != 'balance')
-                        for (final item in catData)
+                        for (var i = 0; i < catData.length; i++)
                           CategoryRankRow(
-                            categoryId: item.id,
-                            category: item.category,
-                            name: item.name,
-                            value: item.total,
-                            percent: sum == 0 ? 0 : item.total / sum,
-                            color: Theme.of(context).colorScheme.primary,
+                            categoryId: catData[i].id,
+                            category: catData[i].category,
+                            name: catData[i].name,
+                            value: catData[i].total,
+                            percent:
+                                sum == 0 ? 0 : catData[i].total / sum,
+                            // ⭐ 二开：复用环形图的色序（kCategoryPieColors），
+                            // 让每一行的图标底色与进度条颜色和它在环形图里的
+                            // 分段颜色一一对应。原先这里对所有行都传
+                            // colorScheme.primary，导致整列排行全是黄的。
+                            color: kCategoryPieColors[
+                                i % kCategoryPieColors.length],
                             start: start,
                             end: end,
                             scope: _scope,
                             selMonth: selMonth,
-                            subCategories: item.subCategories,
+                            subCategories: catData[i].subCategories,
                           ),
                       // 底部留白，避免被悬浮 Tab 栏遮挡
                       SizedBox(height: 56 + 12 + MediaQuery.of(context).viewPadding.bottom + 16),

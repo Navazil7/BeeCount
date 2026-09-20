@@ -189,7 +189,9 @@ class _TransactionActionSheetState
               _DetailRow(
                 label: l10n.importFieldNote,
                 value: t.note!,
-                multiline: true,
+                // 与「分类」「日期」保持同一种左右两栏排版；_DetailRow 非
+                // multiline 模式下用 Expanded 包裹，长备注会自动换行。
+                multiline: false,
               ),
             if (_tags.isNotEmpty)
               _DetailRow(

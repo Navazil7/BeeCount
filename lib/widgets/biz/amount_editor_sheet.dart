@@ -7,6 +7,7 @@ import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beecount/widgets/ui/wheel_date_picker.dart';
 import '../../data/db.dart';
+import '../../theme.dart';
 import '../../providers/shared_ledger_providers.dart';
 import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
@@ -1133,13 +1134,21 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    // ⭐ 二开：跟随主色明度选前景色（黄底白字仅 1.57:1）
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        BeeTheme.onPrimaryFor(primary)),
                                   ),
                                 )
                               : Text(
                                   isInCalcMode ? '=' : AppLocalizations.of(context).commonFinish,
                                   style: TextStyle(
-                                      color: isEnabled ? Colors.white : BeeTokens.textTertiary(context),
+                                      // ⭐ 二开：原为硬编码 Colors.white —— 在默认
+                                      // 主色 #F8C91C 上对比度只有 1.57:1（WCAG 需
+                                      // 4.5:1）。改用按主色明度自动选出的深墨色，
+                                      // 实测 7.5:1；用户换深色主题时仍自动用白字。
+                                      color: isEnabled
+                                          ? BeeTheme.onPrimaryFor(primary)
+                                          : BeeTokens.textTertiary(context),
                                       fontSize: isInCalcMode ? 24 : 16,
                                       fontWeight: FontWeight.w700),
                                 ),

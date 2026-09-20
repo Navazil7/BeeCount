@@ -9,7 +9,12 @@ import '../../data/db.dart' as db;
 import '../biz/biz.dart';
 
 /// 饼图用的分类调色板（12 色，覆盖常见分类数量）
-const _kPieColors = <Color>[
+///
+/// ⭐ 二开：由私有 `_kPieColors` 改为公开 `kCategoryPieColors`，
+/// 让洞察页的分类排行榜能**复用同一套色序**，使每行的图标/进度条颜色
+/// 与其在环形图中的分段颜色一致（对标钱迹：住房那一行就是橙色，
+/// 和环形图里的橙色分段对得上）。
+const kCategoryPieColors = <Color>[
   Color(0xFF5B8FF9), // 蓝
   Color(0xFF5AD8A6), // 绿
   Color(0xFFF6BD16), // 黄
@@ -86,7 +91,7 @@ class _CategoryPieChartState extends ConsumerState<CategoryPieChart> {
         slices.add((
           name: item.name,
           total: item.total,
-          color: _kPieColors[slices.length % _kPieColors.length],
+          color: kCategoryPieColors[slices.length % kCategoryPieColors.length],
           originalIndex: idx,
         ));
       } else {

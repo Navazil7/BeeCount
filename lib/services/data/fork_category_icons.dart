@@ -131,6 +131,10 @@ class ForkCategoryIcons {
 
     // ── 其他 ──
     '日常': 'schedule',
+    // 「提升」是**一级分类**，它所有交易都带二级分类，所以只提取叶子名时会漏掉它
+    // （首版就漏了，实机发现它显示为纯圆点）。它不在上游关键字表里，
+    // 必须靠本表精确命中。
+    '提升': 'self_improvement',
     '聚会': 'groups',
     '恋爱': 'favorite',
     '旅行': 'card_travel',
@@ -152,22 +156,42 @@ class ForkCategoryIcons {
   /// 该名字是否被本二开表精确覆盖（用于统计/自检）。
   static bool hasExact(String name) => byName.containsKey(name);
 
-  /// 回填所有 `icon` 为 NULL/'' 的分类图标，返回更新条数。
+  /// 回填缺失的分类图标，返回更新条数。
   ///
-  /// 幂等、可重复调用；**只碰空图标**，绝不覆盖用户手动选过的图标。
+  /// 幂等、可重复调用。
   ///
-  /// 两个调用点：
-  /// 1. `db.dart` 的 v34 迁移 —— 修好历史数据（钱迹导入的那批分类）；
+  /// [redoGenericFallback] 为 true 时，除了 NULL/'' 之外，还会重刷当前 icon 为
+  /// **通用兜底值 `'circle'`** 的分类 —— 因为 `'circle'` 是上游
+  /// `resolveIconNameByName` 匹配不上时给的"我不知道"占位（一个纯圆点），
+  /// 视觉上等于没图标。
+  ///
+  /// 为防止误伤，重刷时**只处理本表能精确命中的名字**（`hasExact`）：
+  /// 用户若手动给某分类选了圆圈图标，不会被覆盖。
+  ///
+  /// 调用点：
+  /// 1. `db.dart` 的 v34/v35 迁移 —— 修好历史数据（钱迹导入的那批分类）；
   /// 2. `import_confirm_page.dart` 导入完成后 —— 让**将来**的导入也不再丢图标
   ///    （导入器本身没有 category_icon 的字段映射，见 v34 迁移里的说明）。
-  static Future<int> backfillMissing(GeneratedDatabase db) async {
+  static Future<int> backfillMissing(
+    GeneratedDatabase db, {
+    bool redoGenericFallback = false,
+  }) async {
     final rows = await db
-        .customSelect("SELECT id, name FROM categories WHERE icon IS NULL OR icon = ''")
+        .customSelect(redoGenericFallback
+            ? "SELECT id, name, icon FROM categories "
+                "WHERE icon IS NULL OR icon = '' OR icon = 'circle'"
+            : "SELECT id, name, icon FROM categories "
+                "WHERE icon IS NULL OR icon = ''")
         .get();
     var updated = 0;
     for (final row in rows) {
       final id = row.data['id'] as int;
       final name = row.data['name'] as String? ?? '';
+      final current = row.data['icon'] as String?;
+      // 只重刷"通用兜底 + 本表能精确命中"的；NULL/'' 一律回填
+      if (redoGenericFallback && current == 'circle' && !hasExact(name)) {
+        continue;
+      }
       await db.customStatement(
         'UPDATE categories SET icon = ? WHERE id = ?',
         [resolve(name), id],

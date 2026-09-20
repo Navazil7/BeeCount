@@ -512,7 +512,7 @@ class BeeDatabase extends _$BeeDatabase {
   BeeDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 34; // v34: 二开——回填迁移分类的图标
+  int get schemaVersion => 35; // v35: 二开——重刷"通用兜底"分类图标
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1281,6 +1281,25 @@ class BeeDatabase extends _$BeeDatabase {
             logger.info('DBMigration', '开始迁移到 v34: 回填缺失的分类图标（二开）');
             final v34Updated = await ForkCategoryIcons.backfillMissing(this);
             logger.info('DBMigration', 'v34 迁移完成: 回填 $v34Updated 条分类图标');
+          }
+          if (from < 35) {
+            // v35（二开）: 重刷"通用兜底"图标。
+            //
+            // v34 只用 NULL/'' 判定"缺图标"，但上游 resolveIconNameByName 在
+            // 匹配不上时会返回 'circle'（一个纯圆点）—— 视觉上等于没图标，
+            // 却因为非空而被 v34 跳过。
+            //
+            // 实机发现的具体案例：一级分类「提升」不在上游关键字表里，
+            // v34 把它刷成了 'circle'，看起来仍是个空点。
+            //
+            // 本次重刷只针对**本二开表能精确命中**的分类（ForkCategoryIcons
+            // .hasExact），因此用户若手动给某分类选了圆圈图标不会被覆盖。
+            logger.info('DBMigration', '开始迁移到 v35: 重刷通用兜底图标（二开）');
+            final v35Updated = await ForkCategoryIcons.backfillMissing(
+              this,
+              redoGenericFallback: true,
+            );
+            logger.info('DBMigration', 'v35 迁移完成: 重刷 $v35Updated 条分类图标');
           }
         },
         onCreate: (m) async {
