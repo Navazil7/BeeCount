@@ -788,6 +788,18 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     }
 
     String fmtDate(DateTime d) => '${d.year}/${d.month}/${d.day}';
+    // ⭐ 二开：当天/昨天直接显示相对日期 —— 一眼看出要不要改，少跑一趟选择器。
+    // 背景：日期选择器贴在屏幕最下沿，而三列里最常用的「日」排在最右，够起来费劲。
+    String fmtDateSmart(DateTime d) {
+      final l10n = AppLocalizations.of(context);
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final that = DateTime(d.year, d.month, d.day);
+      final diff = today.difference(that).inDays;
+      if (diff == 0) return l10n.dateQuickToday;
+      if (diff == 1) return l10n.dateQuickYesterday;
+      return fmtDate(d);
+    }
     String fmtTime(DateTime d) => '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}:${d.second.toString().padLeft(2, '0')}';
     final showTime = ref.watch(showTransactionTimeProvider);
 
@@ -1013,7 +1025,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(
-                                        fmtDate(_date),
+                                        fmtDateSmart(_date),
                                         style: text.labelSmall?.copyWith(
                                             color: BeeTokens.textPrimary(context),
                                             fontWeight: FontWeight.w600),
@@ -1028,7 +1040,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                                     ],
                                   )
                                 : Text(
-                                    fmtDate(_date),
+                                    fmtDateSmart(_date),
                                     style: text.labelMedium?.copyWith(
                                         color: BeeTokens.textPrimary(context),
                                         fontWeight: FontWeight.w600),

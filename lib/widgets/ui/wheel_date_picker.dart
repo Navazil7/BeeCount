@@ -142,8 +142,16 @@ class _WheelDatePickerState extends State<WheelDatePicker> {
               ],
             ),
           ),
+          // ⭐ 二开：常用日期一键选定。记账绝大多数是当天或补昨天，而滚轮贴在最下沿、
+          // 最常用的「日」列又在最右侧，单手够不到；给三个一键入口后常见情况不必碰滚轮。
+          if (mode == WheelDatePickerMode.ymd)
+            _QuickDateBar(
+              minDate: _min,
+              maxDate: _max,
+              onPick: (d) => Navigator.pop(context, d),
+            ),
           SizedBox(
-            height: 156, // 3个可见项（52*3）更舒适
+            height: 260, // ⭐ 二开：5 个可见项（原 3 行）——更容易点中，选中行也整体上移
             child: Row(
               children: [
                 Expanded(
@@ -406,8 +414,13 @@ class _DateStepPickerState extends State<_DateStepPicker> {
               ],
             ),
           ),
+          _QuickDateBar(
+            minDate: _min,
+            maxDate: _max,
+            onPick: (d) => Navigator.pop(context, d),
+          ),
           SizedBox(
-            height: 156,
+            height: 260, // ⭐ 二开：5 个可见项（原 3 行）
             child: Row(
               children: [
                 Expanded(
@@ -634,6 +647,75 @@ class _TimeStepPickerState extends State<_TimeStepPicker> {
             const SizedBox(height: 20),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// ⭐ 二开：日期选择器顶部的「今天 / 昨天 / 前天」快捷行。
+///
+/// 动机：滚轮选择器贴在屏幕最下沿，而三列里最常用的「日」又排在最右，
+/// 单手（尤其左手）很难够到。记账场景绝大多数是当天或补记昨天，
+/// 给三个一键入口后，常见情况完全不需要滚轮。
+class _QuickDateBar extends StatelessWidget {
+  const _QuickDateBar({
+    required this.minDate,
+    required this.maxDate,
+    required this.onPick,
+  });
+
+  final DateTime minDate;
+  final DateTime maxDate;
+  final ValueChanged<DateTime> onPick;
+
+  DateTime _clamp(DateTime d) {
+    if (d.isBefore(minDate)) return minDate;
+    if (d.isAfter(maxDate)) return maxDate;
+    return d;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final items = <List<Object>>[
+      [l10n.dateQuickToday, _clamp(today)],
+      [l10n.dateQuickYesterday, _clamp(today.subtract(const Duration(days: 1)))],
+      [l10n.dateQuickDayBefore, _clamp(today.subtract(const Duration(days: 2)))],
+    ];
+    final primary = Theme.of(context).primaryColor;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      child: Row(
+        children: [
+          for (int i = 0; i < items.length; i++) ...[
+            if (i > 0) const SizedBox(width: 8),
+            Expanded(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: () => onPick(items[i][1] as DateTime),
+                child: Container(
+                  height: 38,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: primary.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    items[i][0] as String,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: primary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
