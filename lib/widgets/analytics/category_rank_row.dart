@@ -178,9 +178,11 @@ class _CategoryRankRowState extends ConsumerState<CategoryRankRow> {
               width: isTopLevel ? 44 : 38,
               height: isTopLevel ? 44 : 38,
               decoration: BoxDecoration(
-                color: isTopLevel
-                    ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
-                    : widget.color.withValues(alpha: 0.08),
+                // ⭐ 二开：一级分类的图标底色也跟随本行配色（widget.color），
+                // 不再固定用品牌主色。原先无论该行是蓝/绿/红，图标底下都压着
+                // 一个淡黄圆，与调色板割裂；现在底色 = 本行颜色 12% 透明，
+                // 和环形图分段、进度条保持同一色系。
+                color: widget.color.withValues(alpha: isTopLevel ? 0.12 : 0.08),
                 shape: BoxShape.circle,
               ),
               child: iconWidget,
