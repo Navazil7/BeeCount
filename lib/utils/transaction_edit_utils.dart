@@ -11,6 +11,7 @@ import '../l10n/app_localizations.dart';
 import '../widgets/ui/ui.dart';
 import '../widgets/biz/transaction_action_sheet.dart';
 import 'shared_ledger_picker_filter.dart' show syntheticIdForSyncId;
+import 'append_only_guard.dart';
 
 class TransactionEditUtils {
   /// 打开整页编辑器修改/新建一笔。
@@ -25,6 +26,11 @@ class TransactionEditUtils {
     Category? category, {
     bool asNew = false,
   }) async {
+    // ⭐ 二开：追加式守卫 —— 编辑**已有**账单需先在「数据管理 → 防误改」解锁；
+    // 「复制」（asNew=true）属于新增，不受限制。
+    if (!asNew && !await AppendOnlyGuard.guardEdit(context, ref)) return;
+    if (!context.mounted) return;
+
     // 获取交易关联的标签ID(主表 + §7 override 表)
     final repo = ref.read(repositoryProvider);
     final tags = await repo.getTagsForTransaction(transaction.id);
@@ -124,6 +130,10 @@ class TransactionEditUtils {
     WidgetRef ref,
     Transaction transaction,
   ) async {
+    // ⭐ 二开：追加式守卫 —— 未解锁时直接拦下（优先于二次确认）
+    if (!await AppendOnlyGuard.guardDelete(context, ref)) return;
+    if (!context.mounted) return;
+
     final l10n = AppLocalizations.of(context);
     final confirmed = await AppDialog.confirm<bool>(
           context,

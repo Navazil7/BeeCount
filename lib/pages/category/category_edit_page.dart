@@ -15,6 +15,7 @@ import '../../styles/tokens.dart';
 import '../../services/billing/post_processor.dart';
 import '../../services/custom_icon_service.dart';
 import '../../services/system/logger_service.dart';
+import '../../utils/append_only_guard.dart';
 import '../transaction/category_detail_page.dart';
 import 'category_migration_page.dart';
 
@@ -467,6 +468,20 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
       return;
     }
 
+    // ⭐ 二开：追加式守卫 —— 分类**只允许换图标**，不允许改名/改父级。
+    // （名称变了就无法与钱迹侧的分类对应，会破坏同步一致性）
+    if (isEditing) {
+      final orig = widget.category!;
+      final newParentId = _isSubCategory ? _selectedParentCategory?.id : null;
+      final structuralChange =
+          name != orig.name || newParentId != orig.parentId;
+      if (structuralChange &&
+          !await AppendOnlyGuard.guardEdit(context, ref)) {
+        return;
+      }
+      if (!mounted) return;
+    }
+
     setState(() => _saving = true);
 
     try {
@@ -570,6 +585,10 @@ class _CategoryEditPageState extends ConsumerState<CategoryEditPage> {
 
   void _deleteCategory() async {
     if (!isEditing) return;
+
+    // ⭐ 二开：追加式守卫（删除分类）
+    if (!await AppendOnlyGuard.guardDelete(context, ref)) return;
+    if (!mounted) return;
 
     final repo = ref.read(repositoryProvider);
 

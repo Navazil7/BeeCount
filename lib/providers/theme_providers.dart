@@ -317,6 +317,26 @@ final showTransactionTimeInitProvider = FutureProvider<void>((ref) async {
   });
 });
 
+
+// ⭐ 二开：允许编辑/删除历史账单（默认 false = 「只能新增」）
+//
+// 用途：本项目的账单要单向同步进钱迹，而钱迹没有任何修改/删除接口（只能追加）。
+// 因此默认禁止改删，保证两边永远一致；确实需要修改时在此临时解锁。
+// 守卫实现在 lib/utils/append_only_guard.dart。
+final allowEditHistoryProvider = StateProvider<bool>((ref) => false);
+
+// 持久化初始化。**刻意不推云端**：这是本机的防误改策略，不是外观偏好。
+final allowEditHistoryInitProvider = FutureProvider<void>((ref) async {
+  final prefs = await SharedPreferences.getInstance();
+  final saved = prefs.getBool(allowEditHistory);
+  if (saved != null) {
+    ref.read(allowEditHistoryProvider.notifier).state = saved;
+  }
+  ref.listen<bool>(allowEditHistoryProvider, (prev, next) async {
+    await prefs.setBool(allowEditHistory, next);
+  });
+});
+
 // 备注显示方式 Provider(默认分类优先)
 // 'category' = 分类名为主,备注挂括号小灰字(当前样式)
 // 'note'     = 备注优先,有备注显示备注、无备注显示分类名

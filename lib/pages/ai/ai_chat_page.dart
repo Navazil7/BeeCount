@@ -17,6 +17,7 @@ import '../../styles/tokens.dart';
 import '../../utils/ui_scale_extensions.dart';
 import '../../services/billing/post_processor.dart';
 import '../../providers.dart';
+import '../../utils/append_only_guard.dart';
 import '../../providers/ai_chat_providers.dart';
 import '../../ai/core/bill_info.dart';
 import '../../pages/transaction/transaction_editor_page.dart';

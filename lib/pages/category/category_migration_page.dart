@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/database_providers.dart';
 import '../../providers/theme_providers.dart';
+import '../../utils/append_only_guard.dart';
 import '../../data/db.dart' as db;
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/biz.dart';
@@ -284,6 +285,10 @@ class _CategoryMigrationPageState extends ConsumerState<CategoryMigrationPage> {
       return;
     }
     
+    // ⭐ 二开：追加式守卫（分类迁移 = 批量改写账单分类）
+    if (!await AppendOnlyGuard.guardEdit(context, ref)) return;
+    if (!mounted) return;
+
     // 确认迁移
     if (!mounted) return;
     final confirmed = await AppDialog.confirm<bool>(

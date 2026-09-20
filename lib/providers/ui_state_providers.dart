@@ -218,6 +218,7 @@ final appSplashInitProvider = FutureProvider<void>((ref) async {
       ref.watch(headerSkinInitProvider.future),
       ref.watch(headerStyleInitProvider.future),
       ref.watch(securityInitProvider.future),
+      ref.watch(allowEditHistoryInitProvider.future),
     ]);
     logger.info(tag, '基础配置初始化完成: ${DateTime.now().difference(stepTime).inMilliseconds}ms');
     stepTime = DateTime.now();

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../data/db.dart' as db;
 import '../../providers.dart';
+import '../../utils/append_only_guard.dart';
 import '../../providers/budget_providers.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/biz.dart';
@@ -441,6 +442,9 @@ class _TagDetailPageState extends ConsumerState<TagDetailPage> {
   }
 
   Future<void> _deleteTransaction(db.Transaction transaction, AppLocalizations l10n) async {
+    // ⭐ 二开：追加式守卫（删除账单）
+    if (!await AppendOnlyGuard.guardDelete(context, ref)) return;
+    if (!mounted) return;
     final repo = ref.read(repositoryProvider);
     final ledgerId = ref.read(currentLedgerIdProvider);
 

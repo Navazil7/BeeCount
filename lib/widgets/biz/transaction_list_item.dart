@@ -7,6 +7,7 @@ import '../../widgets/ui/ui.dart';
 import '../../widgets/category_icon.dart';
 import '../../providers/database_providers.dart';
 import '../../providers/theme_providers.dart';
+import '../../utils/append_only_guard.dart';
 import 'amount_text.dart';
 import 'tag_chip.dart';
 import 'transaction_row_title.dart';
@@ -436,6 +437,9 @@ class TransactionListItem extends ConsumerWidget {
           ),
         ),
         confirmDismiss: (direction) async {
+          // ⭐ 二开：追加式守卫（未解锁时不给删）
+          if (!await AppendOnlyGuard.guardDelete(context, ref)) return false;
+          if (!context.mounted) return false;
           // ⭐ 二开：原为硬编码中文（en/ko 界面会露出中文），改用 l10n。
           final l10n = AppLocalizations.of(context);
           return await AppDialog.confirm<bool>(

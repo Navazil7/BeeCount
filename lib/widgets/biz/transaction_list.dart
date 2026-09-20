@@ -12,6 +12,7 @@ import '../../widgets/biz/biz.dart';
 import '../../styles/tokens.dart';
 import '../../services/billing/post_processor.dart';
 import '../../utils/transaction_edit_utils.dart';
+import '../../utils/append_only_guard.dart';
 import '../../utils/category_utils.dart';
 import '../category_icon.dart';
 import '../../pages/transaction/category_detail_page.dart';
@@ -476,6 +477,11 @@ class TransactionListState extends ConsumerState<TransactionList> {
                 child: const Icon(Icons.delete, color: Colors.white),
               ),
               confirmDismiss: (direction) async {
+                // ⭐ 二开：追加式守卫（未解锁时不给删）
+                if (!await AppendOnlyGuard.guardDelete(context, ref)) {
+                  return false;
+                }
+                if (!context.mounted) return false;
                 return await AppDialog.confirm<bool>(
                       context,
                       title: AppLocalizations.of(context).deleteConfirmTitle,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/db.dart';
 import '../../providers.dart';
+import '../../utils/append_only_guard.dart';
 import '../../providers/budget_providers.dart';
 import '../../widgets/biz/biz.dart';
 import '../../widgets/ui/ui.dart';
@@ -477,6 +478,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
   /// 执行批量删除
   Future<void> _executeBatchDelete() async {
+    // ⭐ 二开：追加式守卫（批量删除）
+    if (!await AppendOnlyGuard.guardDelete(context, ref)) return;
+    if (!mounted) return;
     final count = _selectedIds.length;
     final l10n = AppLocalizations.of(context);
 
@@ -543,6 +547,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
   /// 执行批量设置备注
   Future<void> _executeBatchSetNote(String note) async {
+    // ⭐ 二开：追加式守卫（批量改备注 = 编辑已有账单）
+    if (!await AppendOnlyGuard.guardEdit(context, ref)) return;
+    if (!mounted) return;
     final repo = ref.read(repositoryProvider);
     final count = _selectedIds.length;
     final l10n = AppLocalizations.of(context);
@@ -616,6 +623,9 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
   /// 执行批量调整分类
   Future<void> _executeBatchChangeCategory(int categoryId) async {
+    // ⭐ 二开：追加式守卫（批量改分类 = 编辑已有账单）
+    if (!await AppendOnlyGuard.guardEdit(context, ref)) return;
+    if (!mounted) return;
     final repo = ref.read(repositoryProvider);
     final count = _selectedIds.length;
     final l10n = AppLocalizations.of(context);

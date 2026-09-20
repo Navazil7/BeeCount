@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers.dart';
+import '../../utils/append_only_guard.dart';
 import '../../providers/budget_providers.dart';
 import '../../data/db.dart' as db;
 import '../../widgets/ui/ui.dart';
@@ -404,6 +405,8 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
               },
               dismissKey: 'tx-${transaction.id}',
               onDelete: () async {
+                // ⭐ 二开：追加式守卫
+                if (!await AppendOnlyGuard.guardDelete(context, ref)) return;
                 final repo = ref.read(repositoryProvider);
                 final ledgerId = ref.read(currentLedgerIdProvider);
 
@@ -489,6 +492,8 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
               },
               dismissKey: 'tx-${transaction.id}',
               onDelete: () async {
+                // ⭐ 二开：追加式守卫
+                if (!await AppendOnlyGuard.guardDelete(context, ref)) return;
                 final repo = ref.read(repositoryProvider);
                 final ledgerId = ref.read(currentLedgerIdProvider);
 

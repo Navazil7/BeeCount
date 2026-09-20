@@ -124,6 +124,29 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                   ),
                 ),
                 SizedBox(height: 8.0.scaled(context, ref)),
+                // ⭐ 二开：防误改（追加式）。
+                // 账单要单向同步进钱迹，而钱迹只能新增、不能改删；默认锁住改删入口，
+                // 保证两边永远一致。守卫实现见 lib/utils/append_only_guard.dart。
+                SectionCard(
+                  margin: EdgeInsets.zero,
+                  child: AppListTile(
+                    leading: Icons.lock_outline,
+                    title: AppLocalizations.of(context).appendOnlySwitchTitle,
+                    subtitle: AppLocalizations.of(context).appendOnlySwitchDesc,
+                    trailing: Switch.adaptive(
+                      value: ref.watch(allowEditHistoryProvider),
+                      onChanged: (value) {
+                        ref.read(allowEditHistoryProvider.notifier).state = value;
+                      },
+                      activeColor: ref.watch(primaryColorProvider),
+                    ),
+                    onTap: () {
+                      final cur = ref.read(allowEditHistoryProvider);
+                      ref.read(allowEditHistoryProvider.notifier).state = !cur;
+                    },
+                  ),
+                ),
+                SizedBox(height: 8.0.scaled(context, ref)),
                 // 附件导出导入
                 _buildAttachmentSection(context, ref),
                 SizedBox(height: 8.0.scaled(context, ref)),

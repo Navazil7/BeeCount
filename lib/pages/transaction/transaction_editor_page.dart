@@ -9,6 +9,7 @@ import '../../providers/budget_providers.dart';
 import '../../data/db.dart';
 import '../../data/repositories/local/local_repository.dart';
 import '../../utils/shared_ledger_picker_filter.dart';
+import '../../utils/append_only_guard.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/amount_editor_sheet.dart';
 import '../../widgets/category/category_selector.dart';
@@ -76,6 +77,24 @@ class _TransactionEditorPageState extends ConsumerState<TransactionEditorPage>
       _tab.index = 2;
     } else {
       _tab.index = 0;
+    }
+
+    // ⭐ 二开：追加式守卫（**编辑侧的唯一收口点**）。
+    // 所有"编辑已有账单"的入口（动作面板、AI 对话、金额编辑浮层、转账表单…）
+    // 最终都会构造带 editingTransactionId 的本页面，因此在这里拦一次即全覆盖。
+    // 详见 lib/utils/append_only_guard.dart。
+    if (widget.editingTransactionId != null &&
+        !AppendOnlyGuard.isUnlocked(ref)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        await AppendOnlyGuard.guardEdit(context, ref);
+        if (!mounted) return;
+        // 用户可能刚在设置里解锁了 —— 那就留在本页继续编辑；否则关掉。
+        if (!AppendOnlyGuard.isUnlocked(ref)) {
+          Navigator.of(context).maybePop();
+        }
+      });
+      return;
     }
 
     // 若需要自动打开金额输入，则在首帧后查询分类并触发
