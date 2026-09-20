@@ -583,10 +583,16 @@ void _pushAppearanceToCloud(Ref ref) {
   }());
 }
 
-// 收支颜色方案Provider（默认红色收入、绿色支出）
+// 收支颜色方案Provider
 // true = 红色收入、绿色支出
 // false = 红色支出、绿色收入
-final incomeExpenseColorSchemeProvider = StateProvider<bool>((ref) => true);
+//
+// ⭐ 二开：默认值由 true 改为 **false（红支出 / 绿收入）**，对标「钱迹」与中文
+// 记账习惯（钱迹实测支出 #EB595E 红、收入 #28C384 绿）。上游默认是"红收入、
+// 绿支出"，会让每一笔支出都显示成绿色，与直觉相反。
+// 仅影响默认值；用户在「设置 → 外观」里显式改过的话，其保存值仍然优先。
+// 如需还原上游行为，把下面这行的 false 改回 true 即可。
+final incomeExpenseColorSchemeProvider = StateProvider<bool>((ref) => false);
 
 // 收支颜色方案持久化初始化
 final incomeExpenseColorSchemeInitProvider = FutureProvider<void>((ref) async {

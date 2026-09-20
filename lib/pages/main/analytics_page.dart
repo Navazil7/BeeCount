@@ -870,57 +870,75 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                   child: ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
-                      AnalyticsSummary(
-                        scope: _scope,
-                        isExpense: _type == 'expense',
-                        isBalance: _type == 'balance',
-                        total: sum,
-                        avg: computeSeriesAverage(filteredSeriesRaw),
-                        expenseColor: Theme.of(context).colorScheme.primary,
-                        incomeColor: Theme.of(context).colorScheme.primary,
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        height: 240,
-                        // ⭐ 二开：折线图 → 柱状图（对标钱迹）。
-                        // 本页数据是离散分桶（月=按天 / 年=按月 / 全部=按年），
-                        // 折线的斜率语义不成立；柱状图用高度表达量级更准确，
-                        // 且不再把数值标满每个点。折线图保留给净值/结余等连续趋势。
-                        child: BarChart(
-                          values: values,
-                          xLabels: xLabels,
-                          highlightIndex: highlightIndex,
-                          hideAmounts: hide,
-                          themeColor: Theme.of(context).colorScheme.primary,
-                          // 使用统一图表令牌
-                          cornerRadius: BeeChartTokens.cornerRadius,
-                          barCornerRadius: 3,
-                          xLabelFontSize: BeeChartTokens.xLabelFontSize,
-                          yLabelFontSize: BeeChartTokens.yLabelFontSize,
-                          onSwipeLeft: () {
-                            // 根据scope切换周期
-                            _onChartSwipeLeft();
-                            setState(() => _chartSwiped = true);
-                          },
-                          onSwipeRight: () {
-                            // 根据scope切换周期
-                            _onChartSwipeRight();
-                            setState(() => _chartSwiped = true);
-                          },
-                          showHint: !chartDismissed,
-                          hintText:
-                              AppLocalizations.of(context).analyticsSwipeHint,
-                          onCloseHint: () async {
-                            final setter =
-                                ref.read(analyticsHintsSetterProvider);
-                            await setter.dismissChart();
-                            if (mounted) {
-                              setState(() => _localChartDismissed = true);
-                            }
-                          },
-                          isDark: BeeTokens.isDark(context),
-                        ),
-                      ),
+                      // ⭐ 二开：图表与汇总改用**语义色**，不再用品牌主色。
+                      // 原先 expenseColor/incomeColor/themeColor 三处全传
+                      // colorScheme.primary（黄），导致支出、收入、柱状图、
+                      // 汇总数值清一色是同一个黄，收支之间毫无颜色区分。
+                      // 钱迹的做法：支出红 #EB595E / 收入绿 #28C384。
+                      // 这里用项目已有的语义色 token（跟随用户的收支配色设置）。
+                      Builder(builder: (context) {
+                        final semanticColor = _type == 'expense'
+                            ? BeeTokens.expenseColor(context, ref)
+                            : _type == 'income'
+                                ? BeeTokens.incomeColor(context, ref)
+                                : Theme.of(context).colorScheme.primary;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            AnalyticsSummary(
+                              scope: _scope,
+                              isExpense: _type == 'expense',
+                              isBalance: _type == 'balance',
+                              total: sum,
+                              avg: computeSeriesAverage(filteredSeriesRaw),
+                              expenseColor: BeeTokens.expenseColor(context, ref),
+                              incomeColor: BeeTokens.incomeColor(context, ref),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              height: 240,
+                              // ⭐ 二开：折线图 → 柱状图（对标钱迹）。
+                              // 本页数据是离散分桶（月=按天 / 年=按月 / 全部=按年），
+                              // 折线的斜率语义不成立；柱状图用高度表达量级更准确，
+                              // 且不再把数值标满每个点。折线图保留给净值/结余等连续趋势。
+                              child: BarChart(
+                                values: values,
+                                xLabels: xLabels,
+                                highlightIndex: highlightIndex,
+                                hideAmounts: hide,
+                                themeColor: semanticColor,
+                                // 使用统一图表令牌
+                                cornerRadius: BeeChartTokens.cornerRadius,
+                                barCornerRadius: 3,
+                                xLabelFontSize: BeeChartTokens.xLabelFontSize,
+                                yLabelFontSize: BeeChartTokens.yLabelFontSize,
+                                onSwipeLeft: () {
+                                  // 根据scope切换周期
+                                  _onChartSwipeLeft();
+                                  setState(() => _chartSwiped = true);
+                                },
+                                onSwipeRight: () {
+                                  // 根据scope切换周期
+                                  _onChartSwipeRight();
+                                  setState(() => _chartSwiped = true);
+                                },
+                                showHint: !chartDismissed,
+                                hintText: AppLocalizations.of(context)
+                                    .analyticsSwipeHint,
+                                onCloseHint: () async {
+                                  final setter =
+                                      ref.read(analyticsHintsSetterProvider);
+                                  await setter.dismissChart();
+                                  if (mounted) {
+                                    setState(() => _localChartDismissed = true);
+                                  }
+                                },
+                                isDark: BeeTokens.isDark(context),
+                              ),
+                            ),
+                          ],
+                        );
+                      }),
                       const SizedBox(height: 12),
                       // 结余视角不显示分类排行榜标题和内容
                       if (_type != 'balance')
