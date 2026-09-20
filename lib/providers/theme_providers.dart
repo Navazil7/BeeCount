@@ -328,12 +328,12 @@ final allowEditHistoryProvider = StateProvider<bool>((ref) => false);
 // 持久化初始化。**刻意不推云端**：这是本机的防误改策略，不是外观偏好。
 final allowEditHistoryInitProvider = FutureProvider<void>((ref) async {
   final prefs = await SharedPreferences.getInstance();
-  final saved = prefs.getBool(allowEditHistory);
+  final saved = prefs.getBool("allowEditHistory");
   if (saved != null) {
     ref.read(allowEditHistoryProvider.notifier).state = saved;
   }
   ref.listen<bool>(allowEditHistoryProvider, (prev, next) async {
-    await prefs.setBool(allowEditHistory, next);
+    await prefs.setBool("allowEditHistory", next);
   });
 });
 
