@@ -30,6 +30,13 @@ class TransactionListItem extends ConsumerWidget {
   final String? categoryName; // 分类名称，用于显示
   final String? ledgerName; // 账本名称（仅"全部账本"模式下显示标签）
   final VoidCallback? onDelete; // 删除回调
+  /// ⭐ 二开：侧滑删除的 Dismissible key。
+  ///
+  /// 原先固定用 `'transaction_$title$amount'` 拼 key，同日、同额、同备注的两笔
+  /// （例如两笔"下馆子 -156.00"）会**key 冲突**，Flutter 复用 Element 时会串行，
+  /// 表现为左滑一行却删掉/错位另一行。调用方应传入带交易 id 的唯一值。
+  /// 为空时回退到旧的拼接方式，保证既有调用点行为不变。
+  final String? dismissKey;
   final String? accountName; // 账户名称，用于显示
   final DateTime? happenedAt; // 交易时间，用于显示时分
 
@@ -67,6 +74,7 @@ class TransactionListItem extends ConsumerWidget {
       this.categoryName,
       this.ledgerName,
       this.onDelete,
+      this.dismissKey,
       this.accountName,
       this.happenedAt,
       this.isSelectionMode = false,
@@ -414,7 +422,8 @@ class TransactionListItem extends ConsumerWidget {
     // 如果提供了删除回调，则包装在Dismissible中支持侧滑删除
     if (onDelete != null) {
       return Dismissible(
-        key: ValueKey('transaction_$title${amount.toString()}'),
+        // ⭐ 二开：优先用调用方给的唯一 key（含交易 id），否则回退旧拼接方式。
+        key: ValueKey(dismissKey ?? 'transaction_$title${amount.toString()}'),
         direction: DismissDirection.endToStart,
         background: Container(
           alignment: Alignment.centerRight,
@@ -427,11 +436,12 @@ class TransactionListItem extends ConsumerWidget {
           ),
         ),
         confirmDismiss: (direction) async {
-          // 显示确认对话框
+          // ⭐ 二开：原为硬编码中文（en/ko 界面会露出中文），改用 l10n。
+          final l10n = AppLocalizations.of(context);
           return await AppDialog.confirm<bool>(
             context,
-            title: '确认删除',
-            message: '确定要删除这笔交易吗？此操作无法撤销。',
+            title: l10n.deleteConfirmTitle,
+            message: l10n.deleteConfirmMessage,
           ) ?? false;
         },
         onDismissed: (direction) {

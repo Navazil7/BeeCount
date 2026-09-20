@@ -199,6 +199,7 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit'**
   String get commonEdit;
+  String get commonCopy;
 
   /// No description provided for @commonMore.
   ///

@@ -4,15 +4,27 @@ import '../data/db.dart';
 import '../pages/transaction/transaction_editor_page.dart';
 import '../data/repositories/local/local_repository.dart';
 import '../providers/database_providers.dart';
+import '../providers.dart';
+import '../providers/budget_providers.dart';
+import '../services/billing/post_processor.dart';
+import '../l10n/app_localizations.dart';
+import '../widgets/ui/ui.dart';
+import '../widgets/biz/transaction_action_sheet.dart';
 import 'shared_ledger_picker_filter.dart' show syntheticIdForSyncId;
 
 class TransactionEditUtils {
+  /// 打开整页编辑器修改/新建一笔。
+  ///
+  /// [asNew] 为 true 时把这条记录当作**模板**新建一笔（即"复制"）：
+  /// 预填同样的分类/金额/备注/账户/标签，但不带 `editingTransactionId`，
+  /// 且日期取**当前时间**（复制通常是"再记一笔类似的"，而不是补记同一天）。
   static Future<void> editTransaction(
     BuildContext context,
     WidgetRef ref,
     Transaction transaction,
-    Category? category,
-  ) async {
+    Category? category, {
+    bool asNew = false,
+  }) async {
     // 获取交易关联的标签ID(主表 + §7 override 表)
     final repo = ref.read(repositoryProvider);
     final tags = await repo.getTagsForTransaction(transaction.id);
@@ -54,9 +66,9 @@ class TransactionEditUtils {
           quickAdd: true,
           initialCategoryId: initialCategoryId,
           initialAmount: transaction.amount,
-          initialDate: transaction.happenedAt,
+          initialDate: asNew ? DateTime.now() : transaction.happenedAt,
           initialNote: transaction.note,
-          editingTransactionId: transaction.id,
+          editingTransactionId: asNew ? null : transaction.id,
           initialAccountId: initialAccountId,
           // 转账特有的参数
           initialToAccountId: initialToAccountId,
@@ -71,5 +83,65 @@ class TransactionEditUtils {
         ),
       ),
     );
+  }
+
+  /// ⭐ 二开：点击一笔账单 → 弹出**底部操作面板**（对标钱迹的账单预览浮层），
+  /// 而不是（像上游那样）直接整页跳到编辑器。
+  ///
+  /// 面板只负责返回用户的选择，真正的导航/写库在这里用**调用方 context** 执行 ——
+  /// 避免在已经关闭的 sheet context 上做 Navigator.push / showDialog。
+  static Future<void> showActions(
+    BuildContext context,
+    WidgetRef ref,
+    Transaction transaction,
+    Category? category,
+  ) async {
+    final action = await TransactionActionSheet.show(
+      context,
+      transaction: transaction,
+      category: category,
+    );
+    if (action == null || !context.mounted) return;
+
+    // 用 if/else 而非 switch：不依赖 Dart 3 对 case 结尾 break 的放宽，
+    // 在各 SDK 版本下都不会有 fallthrough 歧义。
+    if (action == TransactionAction.edit) {
+      await editTransaction(context, ref, transaction, category);
+    } else if (action == TransactionAction.copy) {
+      await editTransaction(context, ref, transaction, category, asNew: true);
+    } else if (action == TransactionAction.delete) {
+      await deleteWithConfirm(context, ref, transaction);
+    }
+  }
+
+  /// 二次确认后删除一笔账单，并刷新统计/预算计数。
+  ///
+  /// 副作用与列表左滑删除（`transaction_list.dart` 的 Dismissible.onDismissed）
+  /// **完全一致**：counts 失效 + stats/budget 刷新计数 + `PostProcessor.sync`，
+  /// 保证两条删除路径结果一致，不会出现"面板删了但统计没更新"。
+  static Future<void> deleteWithConfirm(
+    BuildContext context,
+    WidgetRef ref,
+    Transaction transaction,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await AppDialog.confirm<bool>(
+          context,
+          title: l10n.deleteConfirmTitle,
+          message: l10n.deleteConfirmMessage,
+        ) ??
+        false;
+    if (!confirmed || !context.mounted) return;
+
+    final repo = ref.read(repositoryProvider);
+    final ledgerId = ref.read(currentLedgerIdProvider);
+    await repo.deleteTransaction(transaction.id);
+
+    if (!context.mounted) return;
+    ref.invalidate(countsForLedgerProvider(ledgerId));
+    ref.read(statsRefreshProvider.notifier).state++;
+    ref.read(budgetRefreshProvider.notifier).state++;
+    PostProcessor.sync(ref, ledgerId: ledgerId);
+    if (context.mounted) showToast(context, l10n.commonDeleted);
   }
 }

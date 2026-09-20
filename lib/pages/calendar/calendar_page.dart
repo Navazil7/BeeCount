@@ -639,7 +639,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 tags: tagsList.isNotEmpty ? tagsList : null,
                 attachmentCount: item.attachments.length,
                 onTap: () async {
-                  await TransactionEditUtils.editTransaction(
+                  await TransactionEditUtils.showActions(
                     context,
                     ref,
                     item.t,

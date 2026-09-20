@@ -58,6 +58,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get commonEdit => '编辑';
+  String get commonCopy => '复制';
 
   @override
   String get commonMore => '更多';
@@ -7942,6 +7943,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get commonEdit => '編輯';
+  String get commonCopy => '複製';
 
   @override
   String get commonMore => '更多';

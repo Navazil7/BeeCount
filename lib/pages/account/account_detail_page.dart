@@ -1026,7 +1026,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
         );
 
     if (!context.mounted) return;
-    await TransactionEditUtils.editTransaction(context, ref, tx, category);
+    await TransactionEditUtils.showActions(context, ref, tx, category);
 
     // 刷新数据
     ref.invalidate(accountStatsProvider(widget.account.id));

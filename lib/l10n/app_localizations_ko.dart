@@ -58,6 +58,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get commonEdit => '편집';
+  String get commonCopy => '복사';
 
   @override
   String get commonMore => '더보기';

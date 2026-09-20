@@ -58,6 +58,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commonEdit => 'Edit';
+  String get commonCopy => 'Copy';
 
   @override
   String get commonMore => 'More';

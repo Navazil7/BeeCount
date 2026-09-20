@@ -1029,6 +1029,7 @@
   "commonDelete": "刪除",
   "commonDeleted": "已刪除",
   "commonEdit": "編輯",
+  "commonCopy": "複製",
   "commonEmpty": "暫無資料",
   "commonError": "錯誤",
   "commonFailed": "失敗",

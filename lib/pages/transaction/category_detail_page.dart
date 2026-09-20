@@ -395,13 +395,14 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
               happenedAt: transaction.happenedAt,
               onTap: () async {
                 final categoryData = ref.read(_categoryStreamProvider(widget.categoryId));
-                await TransactionEditUtils.editTransaction(
+                await TransactionEditUtils.showActions(
                   context,
                   ref,
                   transaction,
                   categoryData.value,
                 );
               },
+              dismissKey: 'tx-${transaction.id}',
               onDelete: () async {
                 final repo = ref.read(repositoryProvider);
                 final ledgerId = ref.read(currentLedgerIdProvider);
@@ -477,7 +478,7 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
               happenedAt: transaction.happenedAt,
               onTap: () async {
                 final categoryData = ref.read(_categoryStreamProvider(widget.categoryId));
-                await TransactionEditUtils.editTransaction(
+                await TransactionEditUtils.showActions(
                   context,
                   ref,
                   transaction,
@@ -486,6 +487,7 @@ class _CategoryDetailPageState extends ConsumerState<CategoryDetailPage> {
                 // 注意：现在无需手动刷新！
                 // 数据库变化会自动通过Stream推送到UI
               },
+              dismissKey: 'tx-${transaction.id}',
               onDelete: () async {
                 final repo = ref.read(repositoryProvider);
                 final ledgerId = ref.read(currentLedgerIdProvider);
