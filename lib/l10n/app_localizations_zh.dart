@@ -7887,6 +7887,36 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get agentRunStop => '停止';
+
+  @override
+  String get appearanceHeaderStyle => '头部风格';
+
+  @override
+  String get appearanceHeaderStyleDesc => '亮色模式下头部的底色';
+
+  @override
+  String get headerStyleBrand => '品牌色';
+
+  @override
+  String get headerStyleBrandDesc => '亮色模式整块铺主题色（上游默认）。';
+
+  @override
+  String get headerStyleSoft => '柔蜜渐变';
+
+  @override
+  String get headerStyleSoftDesc => '主题色向下渐隐，保留品牌色但不再刺眼。';
+
+  @override
+  String get headerStyleLight => '浅色';
+
+  @override
+  String get headerStyleLightDesc => '白色头部，主题色只用在小图标与按钮上。';
+
+  @override
+  String get headerStyleHybrid => '混合（推荐）';
+
+  @override
+  String get headerStyleHybridDesc => '首页、洞察等主页面用柔蜜渐变，设置等子页面用浅色。';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -15400,4 +15430,34 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get currencyMRU => '毛里塔尼亞烏吉亞';
+
+  @override
+  String get appearanceHeaderStyle => '頭部風格';
+
+  @override
+  String get appearanceHeaderStyleDesc => '亮色模式下頭部的底色';
+
+  @override
+  String get headerStyleBrand => '品牌色';
+
+  @override
+  String get headerStyleBrandDesc => '亮色模式整塊鋪主題色（上游預設）。';
+
+  @override
+  String get headerStyleSoft => '柔蜜漸層';
+
+  @override
+  String get headerStyleSoftDesc => '主題色向下漸隱，保留品牌色但不再刺眼。';
+
+  @override
+  String get headerStyleLight => '淺色';
+
+  @override
+  String get headerStyleLightDesc => '白色頭部，主題色只用在小圖示與按鈕上。';
+
+  @override
+  String get headerStyleHybrid => '混合（推薦）';
+
+  @override
+  String get headerStyleHybridDesc => '首頁、洞察等主頁面用柔蜜漸層，設定等子頁面用淺色。';
 }

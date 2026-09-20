@@ -86,6 +86,15 @@ class _AppearanceSettingsPageState
     final skinDisplay = headerSkin == kHeaderSkinNone
         ? l10n.headerSkinNone
         : (headerSkinById(headerSkin)?.nameOf(l10n) ?? l10n.headerSkinNone);
+    // ⭐ 二开：头部风格当前值（亮色模式头部底色，四档）
+    final headerStyle = ref.watch(headerStyleProvider);
+    final headerStyleDisplay = headerStyle == BeeHeaderStyle.brand
+        ? l10n.headerStyleBrand
+        : headerStyle == BeeHeaderStyle.soft
+            ? l10n.headerStyleSoft
+            : headerStyle == BeeHeaderStyle.light
+                ? l10n.headerStyleLight
+                : l10n.headerStyleHybrid;
 
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
@@ -138,6 +147,14 @@ class _AppearanceSettingsPageState
                             MaterialPageRoute(builder: (_) => const HeaderSkinPage()),
                           );
                         },
+                      ),
+                      BeeTokens.cardDivider(context),
+                      // ⭐ 二开：头部风格 —— 亮色模式头部底色（品牌色/柔蜜渐变/浅色/混合）
+                      AppListTile(
+                        leading: Icons.format_paint_outlined,
+                        title: l10n.appearanceHeaderStyle,
+                        subtitle: headerStyleDisplay,
+                        onTap: () => _showHeaderStyleDialog(context, ref, l10n),
                       ),
                       BeeTokens.cardDivider(context),
                       // 皮肤动效 —— 关掉后动态皮肤停在静态帧(省电)
@@ -334,6 +351,186 @@ class _AppearanceSettingsPageState
   }
 
   /// 显示主题模式选择对话框
+  /// ⭐ 二开：头部风格选择（品牌色 / 柔蜜渐变 / 浅色 / 混合）
+  ///
+  /// 上游把主题色整块铺满头部（82 处调用点），品牌黄饱和度过高。这里给出四档，
+  /// 「混合」为默认：主 tab 用柔和渐变保留品牌识别，子页用浅色把颜色让给内容。
+  void _showHeaderStyleDialog(
+      BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+    final current = ref.read(headerStyleProvider);
+    final primary = ref.watch(primaryColorProvider);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: BeeTokens.surfaceElevated(context),
+        title: Text(
+          l10n.appearanceHeaderStyle,
+          style: TextStyle(color: BeeTokens.textPrimary(context)),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.appearanceHeaderStyleDesc,
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.4,
+                  color: BeeTokens.textSecondary(context),
+                ),
+              ),
+              const SizedBox(height: 6),
+              _buildHeaderStyleOption(context, ref,
+                  title: l10n.headerStyleHybrid,
+                  desc: l10n.headerStyleHybridDesc,
+                  value: BeeHeaderStyle.hybrid,
+                  currentValue: current,
+                  primary: primary),
+              _buildHeaderStyleOption(context, ref,
+                  title: l10n.headerStyleSoft,
+                  desc: l10n.headerStyleSoftDesc,
+                  value: BeeHeaderStyle.soft,
+                  currentValue: current,
+                  primary: primary),
+              _buildHeaderStyleOption(context, ref,
+                  title: l10n.headerStyleLight,
+                  desc: l10n.headerStyleLightDesc,
+                  value: BeeHeaderStyle.light,
+                  currentValue: current,
+                  primary: primary),
+              _buildHeaderStyleOption(context, ref,
+                  title: l10n.headerStyleBrand,
+                  desc: l10n.headerStyleBrandDesc,
+                  value: BeeHeaderStyle.brand,
+                  currentValue: current,
+                  primary: primary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 头部风格缩略预览：把四种底色画成小色块，比文字更快看懂。
+  Widget _headerStylePreview(
+      BuildContext context, BeeHeaderStyle style, Color primary) {
+    const radius = BorderRadius.all(Radius.circular(6));
+    final softGradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [primary, softHeaderTint(primary)],
+    );
+    if (style == BeeHeaderStyle.brand) {
+      return Container(
+        width: 46,
+        height: 30,
+        decoration: BoxDecoration(color: primary, borderRadius: radius),
+      );
+    }
+    if (style == BeeHeaderStyle.soft) {
+      return Container(
+        width: 46,
+        height: 30,
+        decoration:
+            BoxDecoration(borderRadius: radius, gradient: softGradient),
+      );
+    }
+    if (style == BeeHeaderStyle.light) {
+      return Container(
+        width: 46,
+        height: 30,
+        decoration: BoxDecoration(
+          color: BeeTokens.surface(context),
+          borderRadius: radius,
+          border: Border.all(color: BeeTokens.border(context)),
+        ),
+      );
+    }
+    // hybrid：左半柔蜜渐变（主 tab）+ 右半浅色（子页）
+    return SizedBox(
+      width: 46,
+      height: 30,
+      child: ClipRRect(
+        borderRadius: radius,
+        child: Row(
+          children: [
+            Expanded(child: Container(decoration: BoxDecoration(gradient: softGradient))),
+            Expanded(
+              child: Container(
+                color: BeeTokens.surface(context),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Container(
+                    width: 1,
+                    color: BeeTokens.border(context),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderStyleOption(
+    BuildContext context,
+    WidgetRef ref, {
+    required String title,
+    required String desc,
+    required BeeHeaderStyle value,
+    required BeeHeaderStyle currentValue,
+    required Color primary,
+  }) {
+    final isSelected = value == currentValue;
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: () {
+        ref.read(headerStyleProvider.notifier).state = value;
+        Navigator.pop(context);
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+        child: Row(
+          children: [
+            _headerStylePreview(context, value, primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.w500,
+                      color: isSelected
+                          ? primary
+                          : BeeTokens.textPrimary(context),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    desc,
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.35,
+                      color: BeeTokens.textSecondary(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected) Icon(Icons.check, color: primary),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showThemeModeDialog(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     final currentMode = ref.read(themeModeProvider);
 

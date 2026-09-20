@@ -2935,5 +2935,15 @@
   "currencyLSL": "萊索托洛蒂",
   "currencySZL": "斯威士蘭里蘭吉尼",
   "currencyMGA": "马達加斯加阿里亞里",
-  "currencyMRU": "毛里塔尼亞烏吉亞"
+  "currencyMRU": "毛里塔尼亞烏吉亞",
+  "appearanceHeaderStyle": "頭部風格",
+  "appearanceHeaderStyleDesc": "亮色模式下頭部的底色",
+  "headerStyleBrand": "品牌色",
+  "headerStyleBrandDesc": "亮色模式整塊鋪主題色（上游預設）。",
+  "headerStyleSoft": "柔蜜漸層",
+  "headerStyleSoftDesc": "主題色向下漸隱，保留品牌色但不再刺眼。",
+  "headerStyleLight": "淺色",
+  "headerStyleLightDesc": "白色頭部，主題色只用在小圖示與按鈕上。",
+  "headerStyleHybrid": "混合（推薦）",
+  "headerStyleHybridDesc": "首頁、洞察等主頁面用柔蜜漸層，設定等子頁面用淺色。"
 }

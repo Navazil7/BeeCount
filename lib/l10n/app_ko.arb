@@ -2171,5 +2171,15 @@
   "txFlagExcludeFromStatsHint": "통계에서는 제외되지만 잔액에는 계속 반영됩니다",
   "txFlagExcludeFromBudgetHint": "예산에는 반영되지 않습니다",
   "txFlagExcludedTag": "제외됨",
-  "txFlagBudgetExcludedTag": "예산 제외"
+  "txFlagBudgetExcludedTag": "예산 제외",
+  "appearanceHeaderStyle": "헤더 스타일",
+  "appearanceHeaderStyleDesc": "라이트 모드에서 헤더 배경",
+  "headerStyleBrand": "테마 색",
+  "headerStyleBrandDesc": "테마 색으로 헤더를 가득 채웁니다(기본값).",
+  "headerStyleSoft": "부드러운 꿀빛",
+  "headerStyleSoftDesc": "테마 색이 아래로 옅어집니다. 브랜드는 유지되고 눈부심은 줄어듭니다.",
+  "headerStyleLight": "밝은 색",
+  "headerStyleLightDesc": "흰색 헤더. 테마 색은 아이콘과 버튼에만 남습니다.",
+  "headerStyleHybrid": "혼합 (권장)",
+  "headerStyleHybridDesc": "메인 탭은 부드러운 꿀빛, 하위 페이지는 밝은 색."
 }

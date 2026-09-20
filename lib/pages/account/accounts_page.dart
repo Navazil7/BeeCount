@@ -110,6 +110,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
         children: [
           // ======== 简洁 Header ========
           PrimaryHeader(
+            mainTab: true,
             title: l10n.accountsTitle,
             showBack: !widget.asTab,
             compact: true,

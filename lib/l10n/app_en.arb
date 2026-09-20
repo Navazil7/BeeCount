@@ -3460,5 +3460,15 @@
   "agentActivityToolDenied": "Denied",
   "agentActivityToolFailed": "Failed",
   "agentRunCancelled": "This run was stopped.",
-  "agentRunStop": "Stop"
+  "agentRunStop": "Stop",
+  "appearanceHeaderStyle": "Header style",
+  "appearanceHeaderStyleDesc": "Header background in light mode",
+  "headerStyleBrand": "Theme color",
+  "headerStyleBrandDesc": "Fill the whole header with the theme color (upstream default).",
+  "headerStyleSoft": "Soft honey",
+  "headerStyleSoftDesc": "Fade the theme color downward — keeps the brand, less glare.",
+  "headerStyleLight": "Light",
+  "headerStyleLightDesc": "White header; the theme color stays on icons and buttons.",
+  "headerStyleHybrid": "Hybrid (recommended)",
+  "headerStyleHybridDesc": "Main tabs use Soft honey, sub-pages use Light."
 }

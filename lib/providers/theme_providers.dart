@@ -431,6 +431,55 @@ final headerDecorationStyleInitProvider = FutureProvider<void>((ref) async {
 // 本地持久化 + 并入 appearance 包,随 BeeCount Cloud 多设备同步。
 final headerSkinProvider = StateProvider<String>((ref) => 'none');
 
+/// ⭐ 二开：头部风格 —— **亮色模式**下头部底色的四档开关。
+///
+/// 上游把用户主题色**整块铺满**头部（`primary_header.dart`），全 App 82 处调用点
+/// 都吃这一个值。品牌黄 #F8C91C 饱和差高达 220，铺满后与灰底白卡抢焦点，且其实测
+/// 次要文字对比度仅 4.46:1（WCAG AA 需 4.5）。此开关把「头部底色」从「品牌色」里
+/// 解耦出来：
+/// - [BeeHeaderStyle.brand]：上游原样 —— 亮色铺主题色（老用户零感知）
+/// - [BeeHeaderStyle.soft]：主题色 → 浅色渐变，保品牌但不再刺眼
+/// - [BeeHeaderStyle.light]：浅色（白）头部，主题色退到图标/按钮
+/// - [BeeHeaderStyle.hybrid]：**默认** —— 底部主 tab 用 soft、其余约 70 个子页用
+///   light（对标钱迹：主屏有视觉主张，子页一律干净）
+///
+/// 暗色模式不受影响（仍为纯黑）。
+enum BeeHeaderStyle { brand, soft, light, hybrid }
+
+final headerStyleProvider =
+    StateProvider<BeeHeaderStyle>((ref) => BeeHeaderStyle.hybrid);
+
+/// 「柔蜜渐变」的下端色：由主题色派生（抬亮 + 略降饱和）。
+/// 不写死蜜黄 —— 换任何主题色都成立，浅色主题色会自然收敛到接近白。
+Color softHeaderTint(Color primary) {
+  final hsl = HSLColor.fromColor(primary);
+  return hsl
+      .withLightness((hsl.lightness + 0.30).clamp(0.0, 0.96))
+      .withSaturation((hsl.saturation * 0.82).clamp(0.0, 1.0))
+      .toColor();
+}
+
+/// 头部风格持久化：启动读 prefs，变更写回。
+///
+/// **刻意不进 BeeCount Cloud 的 appearance 包**：appearance 是整包 PATCH、server
+/// 侧整体替换，而 `reconcileProfileToServer` 只带它已知的字段 —— 加新键会在下一次
+/// 对账时被静默清掉。此偏好同步收益极小，按「纯本地」处理更稳。
+final headerStyleInitProvider = FutureProvider<void>((ref) async {
+  final prefs = await SharedPreferences.getInstance();
+  final saved = prefs.getString('beeHeaderStyle');
+  if (saved != null) {
+    for (final s in BeeHeaderStyle.values) {
+      if (s.name == saved) {
+        ref.read(headerStyleProvider.notifier).state = s;
+        break;
+      }
+    }
+  }
+  ref.listen<BeeHeaderStyle>(headerStyleProvider, (prev, next) async {
+    await prefs.setString('beeHeaderStyle', next.name);
+  });
+});
+
 final headerSkinInitProvider = FutureProvider<void>((ref) async {
   final prefs = await SharedPreferences.getInstance();
   final saved = prefs.getString('headerSkin');

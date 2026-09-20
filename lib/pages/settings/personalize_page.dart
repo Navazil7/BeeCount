@@ -8,8 +8,6 @@ import '../../widgets/ui/ui.dart';
 import '../../styles/tokens.dart';
 import 'header_skin_page.dart';
 
-// 兼容旧引用
-final headerStyleProvider = StateProvider<String>((ref) => 'primary');
 
 class PersonalizePage extends ConsumerStatefulWidget {
   const PersonalizePage({super.key});

@@ -60,6 +60,7 @@ class MinePage extends ConsumerWidget {
       body: Column(
         children: [
           PrimaryHeader(
+            mainTab: true,
             showBack: false,
             title: AppLocalizations.of(context).mineTitle,
             compact: true,

@@ -3384,5 +3384,15 @@
   "agentActivityToolDenied": "已拒绝",
   "agentActivityToolFailed": "失败",
   "agentRunCancelled": "本次操作已停止。",
-  "agentRunStop": "停止"
+  "agentRunStop": "停止",
+  "appearanceHeaderStyle": "头部风格",
+  "appearanceHeaderStyleDesc": "亮色模式下头部的底色",
+  "headerStyleBrand": "品牌色",
+  "headerStyleBrandDesc": "亮色模式整块铺主题色（上游默认）。",
+  "headerStyleSoft": "柔蜜渐变",
+  "headerStyleSoftDesc": "主题色向下渐隐，保留品牌色但不再刺眼。",
+  "headerStyleLight": "浅色",
+  "headerStyleLightDesc": "白色头部，主题色只用在小图标与按钮上。",
+  "headerStyleHybrid": "混合（推荐）",
+  "headerStyleHybridDesc": "首页、洞察等主页面用柔蜜渐变，设置等子页面用浅色。"
 }

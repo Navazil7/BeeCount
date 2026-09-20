@@ -14948,6 +14948,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Stop'**
   String get agentRunStop;
+
+  /// No description provided for @appearanceHeaderStyle.
+  ///
+  /// In en, this message translates to:
+  /// **'Header style'**
+  String get appearanceHeaderStyle;
+
+  /// No description provided for @appearanceHeaderStyleDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Header background in light mode'**
+  String get appearanceHeaderStyleDesc;
+
+  /// No description provided for @headerStyleBrand.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme color'**
+  String get headerStyleBrand;
+
+  /// No description provided for @headerStyleBrandDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill the whole header with the theme color (upstream default).'**
+  String get headerStyleBrandDesc;
+
+  /// No description provided for @headerStyleSoft.
+  ///
+  /// In en, this message translates to:
+  /// **'Soft honey'**
+  String get headerStyleSoft;
+
+  /// No description provided for @headerStyleSoftDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Fade the theme color downward — keeps the brand, less glare.'**
+  String get headerStyleSoftDesc;
+
+  /// No description provided for @headerStyleLight.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get headerStyleLight;
+
+  /// No description provided for @headerStyleLightDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'White header; the theme color stays on icons and buttons.'**
+  String get headerStyleLightDesc;
+
+  /// No description provided for @headerStyleHybrid.
+  ///
+  /// In en, this message translates to:
+  /// **'Hybrid (recommended)'**
+  String get headerStyleHybrid;
+
+  /// No description provided for @headerStyleHybridDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Main tabs use Soft honey, sub-pages use Light.'**
+  String get headerStyleHybridDesc;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

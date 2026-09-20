@@ -459,6 +459,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
       body: Column(
         children: [
           PrimaryHeader(
+            mainTab: true,
             title: _currentPeriodLabel(_scope, selMonth, context),
             leadingIcon: Icons.bar_chart_outlined,
             leadingPlain: true,

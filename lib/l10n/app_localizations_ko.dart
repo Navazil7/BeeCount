@@ -7893,4 +7893,34 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get agentRunStop => 'Stop';
+
+  @override
+  String get appearanceHeaderStyle => '헤더 스타일';
+
+  @override
+  String get appearanceHeaderStyleDesc => '라이트 모드에서 헤더 배경';
+
+  @override
+  String get headerStyleBrand => '테마 색';
+
+  @override
+  String get headerStyleBrandDesc => '테마 색으로 헤더를 가득 채웁니다(기본값).';
+
+  @override
+  String get headerStyleSoft => '부드러운 꿀빛';
+
+  @override
+  String get headerStyleSoftDesc => '테마 색이 아래로 옅어집니다. 브랜드는 유지되고 눈부심은 줄어듭니다.';
+
+  @override
+  String get headerStyleLight => '밝은 색';
+
+  @override
+  String get headerStyleLightDesc => '흰색 헤더. 테마 색은 아이콘과 버튼에만 남습니다.';
+
+  @override
+  String get headerStyleHybrid => '혼합 (권장)';
+
+  @override
+  String get headerStyleHybridDesc => '메인 탭은 부드러운 꿀빛, 하위 페이지는 밝은 색.';
 }

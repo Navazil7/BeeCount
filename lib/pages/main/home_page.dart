@@ -7,7 +7,6 @@ import 'dart:async';
 import '../../providers/budget_providers.dart';
 import '../budget/budget_page.dart';
 import '../../providers.dart';
-import '../settings/personalize_page.dart' show headerStyleProvider;
 import '../../data/db.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/biz.dart';
@@ -687,9 +686,9 @@ class _HomePageState extends ConsumerState<HomePage> {
       body: Column(
         children: [
           Consumer(builder: (context, ref, _) {
-            ref.watch(headerStyleProvider);
             final hide = ref.watch(hideAmountsProvider);
             return PrimaryHeader(
+              mainTab: true,
               title: '',
               showTitleSection: false,
               content: Column(

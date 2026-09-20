@@ -28,6 +28,10 @@ class PrimaryHeader extends ConsumerWidget {
   // 隐藏内置标题/副标题行，仅渲染自定义 content（用于首页）
   final bool showTitleSection;
 
+  /// ⭐ 二开：该页是否属于底部主 tab（首页 / 洞察 / 资产 / 我的）。
+  /// 仅 [BeeHeaderStyle.hybrid] 用到：主 tab 走柔蜜渐变、其余页面走浅色。
+  final bool mainTab;
+
   const PrimaryHeader({
     super.key,
     required this.title,
@@ -48,6 +52,7 @@ class PrimaryHeader extends ConsumerWidget {
     this.decoration,
     this.leadingPlain = false,
     this.showTitleSection = true,
+    this.mainTab = false,
   });
 
   @override
@@ -65,8 +70,33 @@ class PrimaryHeader extends ConsumerWidget {
     // 'none' → null = 纯主题色 / 纯黑。
     final skin = headerSkinById(ref.watch(headerSkinProvider));
 
-    // ⭐ Header 背景颜色：亮色模式用主题色，暗黑模式用纯黑
+    // ⭐ Header 背景颜色（上游）：亮色模式用主题色，暗黑模式用纯黑
     final headerBg = isDark ? Colors.black : primary;
+
+    // ⭐ 二开：底色不再写死「亮色 = 主题色」。按「头部风格」四档渲染。
+    // 暗色模式恒定走 brand（= 纯黑），行为与上游完全一致。
+    // hybrid 需要页面自报是否主 tab —— 只有那 4 个页面才配"品牌色"。
+    final headerStyle = ref.watch(headerStyleProvider);
+    final effectiveHeaderStyle = isDark
+        ? BeeHeaderStyle.brand
+        : (headerStyle == BeeHeaderStyle.hybrid
+            ? (mainTab ? BeeHeaderStyle.soft : BeeHeaderStyle.light)
+            : headerStyle);
+    final BoxDecoration headerDecoration;
+    if (effectiveHeaderStyle == BeeHeaderStyle.soft) {
+      headerDecoration = BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [primary, softHeaderTint(primary)],
+        ),
+      );
+    } else if (effectiveHeaderStyle == BeeHeaderStyle.light) {
+      headerDecoration = BoxDecoration(color: BeeTokens.surface(context));
+    } else {
+      // brand / hybrid 兜底：保持上游「铺主题色（暗色为纯黑）」
+      headerDecoration = BoxDecoration(color: headerBg);
+    }
 
     // ⭐ 文字和图标颜色（使用 Token）
     final textColor = BeeTokens.textPrimary(context);
@@ -89,7 +119,7 @@ class PrimaryHeader extends ConsumerWidget {
       child: Material(
         color: Colors.transparent,
         child: Container(
-          decoration: decoration ?? BoxDecoration(color: headerBg), // ⭐ 根据设置决定背景色
+          decoration: decoration ?? headerDecoration, // ⭐ 二开：按「头部风格」出底色
           child: Stack(
             children: [
               // ⭐ 头部皮肤层(主题色之上的装饰);未选皮肤时为纯主题色 / 纯黑
@@ -128,7 +158,11 @@ class PrimaryHeader extends ConsumerWidget {
                                   width: 36,
                                   height: 36,
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.2),
+                                    // 浅色/渐变头部上，白色 20% 圆底不可见 → 改用主题色淡底
+                                    color: effectiveHeaderStyle ==
+                                            BeeHeaderStyle.brand
+                                        ? Colors.white.withValues(alpha: 0.2)
+                                        : primary.withValues(alpha: 0.12),
                                     shape: BoxShape.circle,
                                   ),
                                   child: Icon(leadingIcon, color: iconColor),

@@ -7893,4 +7893,34 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get agentRunStop => 'Stop';
+
+  @override
+  String get appearanceHeaderStyle => 'Header style';
+
+  @override
+  String get appearanceHeaderStyleDesc => 'Header background in light mode';
+
+  @override
+  String get headerStyleBrand => 'Theme color';
+
+  @override
+  String get headerStyleBrandDesc => 'Fill the whole header with the theme color (upstream default).';
+
+  @override
+  String get headerStyleSoft => 'Soft honey';
+
+  @override
+  String get headerStyleSoftDesc => 'Fade the theme color downward — keeps the brand, less glare.';
+
+  @override
+  String get headerStyleLight => 'Light';
+
+  @override
+  String get headerStyleLightDesc => 'White header; the theme color stays on icons and buttons.';
+
+  @override
+  String get headerStyleHybrid => 'Hybrid (recommended)';
+
+  @override
+  String get headerStyleHybridDesc => 'Main tabs use Soft honey, sub-pages use Light.';
 }
