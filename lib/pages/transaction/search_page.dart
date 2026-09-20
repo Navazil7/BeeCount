@@ -1114,8 +1114,13 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                 onTap: _isBatchMode
                                     ? null
                                     : () async {
+                                        // ⭐ 二开：与其它列表保持一致 —— 弹出底部
+                                        // 操作面板（编辑/复制/删除），而不是直接进
+                                        // 整页编辑器。上一批改漏了这一处：它的调用
+                                        // 被换行拆成了 `TransactionEditUtils` +
+                                        // `.editTransaction(`，字符串替换没匹配到。
                                         await TransactionEditUtils
-                                            .editTransaction(
+                                            .showActions(
                                           context,
                                           ref,
                                           item.t,
