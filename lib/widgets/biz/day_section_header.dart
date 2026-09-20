@@ -10,12 +10,17 @@ class DaySectionHeader extends ConsumerWidget {
   final double income;
   final double expense;
   final bool? hide; // 改为可选,null时使用全局状态
+
+  /// ⭐ 二开：点击日期分组头 → 以该日期补记一笔（对标钱迹「点日期头跳到记账」）。
+  /// 为 null 时不拦截点击，行为与改动前完全一致。
+  final VoidCallback? onTap;
   const DaySectionHeader(
       {super.key,
       required this.dateText,
       required this.income,
       required this.expense,
-      this.hide});
+      this.hide,
+      this.onTap});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -52,7 +57,7 @@ class DaySectionHeader extends ConsumerWidget {
     final grey = BeeTokens.textSecondary(context);
     final week = getWeekday(dateText);
     final l10n = AppLocalizations.of(context);
-    return Container(
+    final content = Container(
       // 不设背景色:与交易行一样透明,显示同一外层列表背景。否则暗黑下 header
       // 是 surface 深灰(#1C1C1E)、交易行是纯黑 scaffold 底,两者不协调。
       padding: const EdgeInsets.symmetric(
@@ -93,5 +98,10 @@ class DaySectionHeader extends ConsumerWidget {
         ],
       ),
     );
+
+    // ⭐ 二开：整行可点 → 以该日期补记一笔。
+    // onTap 为 null 时直接返回原样，不影响其它调用点的行为。
+    if (onTap == null) return content;
+    return InkWell(onTap: onTap, child: content);
   }
 }

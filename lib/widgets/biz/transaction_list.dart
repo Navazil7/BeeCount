@@ -15,6 +15,7 @@ import '../../utils/transaction_edit_utils.dart';
 import '../../utils/category_utils.dart';
 import '../category_icon.dart';
 import '../../pages/transaction/category_detail_page.dart';
+import '../../pages/transaction/transaction_editor_page.dart';
 import '../../pages/tag/tag_detail_page.dart';
 import '../../pages/attachment/attachment_preview_page.dart';
 import '../../l10n/app_localizations.dart';
@@ -397,6 +398,25 @@ class TransactionListState extends ConsumerState<TransactionList> {
                   income: dayIncome,
                   expense: dayExpense,
                   hide: widget.hideAmounts,
+                  // ⭐ 二开：点日期分组头 → 以该日期补记一笔（对标钱迹）。
+                  onTap: () async {
+                    final base = DateTime.tryParse(dateKey);
+                    if (base == null) return;
+                    // 时间锁到中午：交易列表按日期分组，00:00 在部分时区可能被
+                    // 算作前一天（与日历页 `_addTransactionForSelectedDate` 同一做法）。
+                    final initialDate =
+                        DateTime(base.year, base.month, base.day, 12, 0, 0);
+                    switchToStreamMode(); // 用户交互，切到 Stream 模式
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => TransactionEditorPage(
+                          initialKind: 'expense',
+                          quickAdd: true,
+                          initialDate: initialDate,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ],
             );

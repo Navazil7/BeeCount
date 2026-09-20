@@ -5,7 +5,7 @@ import '../../widgets/biz/biz.dart';
 import '../../styles/tokens.dart';
 import '../../providers.dart';
 import '../../widgets/ui/ui.dart';
-import '../../widgets/charts/line_chart.dart';
+import '../../widgets/charts/bar_chart.dart';
 import '../../widgets/charts/category_pie_chart.dart';
 import '../../widgets/analytics/analytics_summary.dart';
 import '../../widgets/analytics/category_rank_row.dart';
@@ -29,7 +29,10 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
   bool _chartSwiped = false; // 吸收图表区域横滑，避免父级切换收入/支出
   bool _localHeaderDismissed = false; // 本地快速隐藏，实际持久化在 provider 中
   bool _localChartDismissed = false;
-  bool _showPieChart = false; // 切换饼图/排行榜
+  // ⭐ 二开：环形图改为**默认显示**，且与下方分类排行榜**同时呈现**
+  // （对标钱迹：环形图看构成 + 进度条列表看排名，两者互补而非二选一）。
+  // 本开关现在只表示"是否显示环形图"，列表恒显示。
+  bool _showPieChart = true;
 
   // 显示周期选择器
   void _showPeriodPicker() async {
@@ -879,16 +882,19 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                       const SizedBox(height: 12),
                       SizedBox(
                         height: 240,
-                        child: LineChart(
+                        // ⭐ 二开：折线图 → 柱状图（对标钱迹）。
+                        // 本页数据是离散分桶（月=按天 / 年=按月 / 全部=按年），
+                        // 折线的斜率语义不成立；柱状图用高度表达量级更准确，
+                        // 且不再把数值标满每个点。折线图保留给净值/结余等连续趋势。
+                        child: BarChart(
                           values: values,
                           xLabels: xLabels,
                           highlightIndex: highlightIndex,
                           hideAmounts: hide,
                           themeColor: Theme.of(context).colorScheme.primary,
                           // 使用统一图表令牌
-                          lineWidth: BeeChartTokens.lineWidth,
-                          dotRadius: BeeChartTokens.dotRadius,
                           cornerRadius: BeeChartTokens.cornerRadius,
+                          barCornerRadius: 3,
                           xLabelFontSize: BeeChartTokens.xLabelFontSize,
                           yLabelFontSize: BeeChartTokens.yLabelFontSize,
                           onSwipeLeft: () {
@@ -912,11 +918,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                               setState(() => _localChartDismissed = true);
                             }
                           },
-                          whiteBg: !BeeTokens.isDark(context),
                           isDark: BeeTokens.isDark(context),
-                          showGrid: false,
-                          showDots: true,
-                          annotate: true,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -981,12 +983,21 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                           ],
                         ),
                       if (_type != 'balance') const SizedBox(height: 8),
-                      if (_type != 'balance' && _showPieChart && catData.isNotEmpty && sum > 0)
+                      if (_type != 'balance' &&
+                          _showPieChart &&
+                          catData.isNotEmpty &&
+                          sum > 0) ...[
                         CategoryPieChart(
                           data: catData,
                           sum: sum,
                         ),
-                      if (_type != 'balance' && !_showPieChart)
+                        // 环形图与排行榜同时显示时的间距
+                        const SizedBox(height: 12),
+                      ],
+                      // ⭐ 二开：排行榜恒显示（原为 `!_showPieChart` 才显示，
+                      // 导致环形图与列表互斥）。环形图负责"构成占比"，
+                      // 列表负责"具体排名与环比"，两者信息不重复。
+                      if (_type != 'balance')
                         for (final item in catData)
                           CategoryRankRow(
                             categoryId: item.id,
