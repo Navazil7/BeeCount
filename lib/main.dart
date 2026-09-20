@@ -500,9 +500,12 @@ class MainApp extends ConsumerWidget {
     // ⭐ 亮色主题
     final theme = base.copyWith(
       textTheme: baseTextTheme,
-      colorScheme: base.colorScheme.copyWith(primary: primary),
+      colorScheme: base.colorScheme.copyWith(
+        primary: primary,
+        onPrimary: BeeTheme.onPrimaryFor(primary), // ⭐ 黄底上必须用深色前景（白字仅 1.57:1）
+      ),
       primaryColor: primary,
-      scaffoldBackgroundColor: Colors.white,
+      scaffoldBackgroundColor: BeeTheme.pageBg,
       dividerColor: Colors.black.withOpacity(0.06),
       listTileTheme: ListTileThemeData(
         dense: true,
@@ -526,14 +529,14 @@ class MainApp extends ConsumerWidget {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: primary,
-          foregroundColor: Colors.white,
+          foregroundColor: BeeTheme.onPrimaryFor(primary), // ⭐ 白字在黄底仅 1.57:1
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
       floatingActionButtonTheme: base.floatingActionButtonTheme.copyWith(
         backgroundColor: primary,
-        foregroundColor: Colors.white,
+        foregroundColor: BeeTheme.onPrimaryFor(primary), // ⭐ 同步修正
       ),
       bottomNavigationBarTheme: base.bottomNavigationBarTheme.copyWith(
         selectedItemColor: primary,

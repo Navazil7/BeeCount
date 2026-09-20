@@ -30,10 +30,13 @@ class BeeTokens {
   // ========== 背景色 Token (Surface) ==========
 
   /// 页面背景色（Scaffold 背景）
-  /// - 亮色模式：#FAFAFA (灰50)
+  /// - 亮色模式：#F5F6F7 (中性冷灰，与纯白卡片形成层次)
   /// - 暗黑模式：#000000 (纯黑)
+  ///
+  /// 原值为 Colors.grey.shade50 (#FAFAFA)，与白卡片对比度仅 1.05:1，
+  /// 页面与卡片几乎同色、层次为零。此为对标「钱迹」页面底色 (#F5F6F7)。
   static Color scaffoldBackground(BuildContext context) =>
-      isDark(context) ? Colors.black : Colors.grey.shade50;
+      isDark(context) ? Colors.black : const Color(0xFFF5F6F7);
 
   /// 卡片背景色（贴在页面上的卡片）
   /// - 亮色模式：#FFFFFF (白色)

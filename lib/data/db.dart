@@ -4,6 +4,7 @@ import 'dart:ui' show Locale;
 import 'package:drift/drift.dart';
 import '../l10n/app_localizations.dart';
 import '../services/data/category_service.dart';
+import '../services/data/fork_category_icons.dart';
 import '../services/data/seed_service.dart';
 import '../services/system/logger_service.dart';
 import 'package:drift/native.dart';
@@ -511,7 +512,7 @@ class BeeDatabase extends _$BeeDatabase {
   BeeDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 33; // v33: Agent 本地记忆、摘要与审计表
+  int get schemaVersion => 34; // v34: 二开——回填迁移分类的图标
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1257,6 +1258,29 @@ class BeeDatabase extends _$BeeDatabase {
             );
             await _createAgentMemoryFtsTable();
             logger.info('DBMigration', 'v33 迁移完成');
+          }
+          if (from < 34) {
+            // v34（二开）: 回填分类图标。
+            //
+            // 背景：本项目分类是从「钱迹」用 CSV 导入的。导入器
+            // (pages/data/import_confirm_page.dart) 里虽然**有**读取
+            // category_icon / sub_category_icon 的代码，但字段映射表 (mapping)
+            // 里**没有**这两个 key，UI 也没有对应的映射行 —— 于是
+            // getBy('category_icon') 恒为 null，导入创建的每个分类 icon 都是空。
+            //
+            // 而 v23 那次「按名字回填图标」的迁移只惠及当时已存在的分类；
+            // 导入发生在其后，且渲染层 (widgets/category_icon.dart) 在 v23 之后
+            // 已彻底移除 byName 兜底 —— 结果就是全 App 所有分类都显示
+            // Icons.category 占位图（91 个分类、3212 笔交易无一例外）。
+            //
+            // 这里复刻 v23 的回填逻辑，但改用二开专用精确名表
+            // (ForkCategoryIcons)：实测覆盖本项目全部 89 个分类，并修正了
+            // 上游顺序误判（电子产品→水费、健身房→房子、洗衣房→衣柜 等）。
+            //
+            // 只处理 icon 为 NULL/'' 的分类：幂等、可重跑、不覆盖用户手选图标。
+            logger.info('DBMigration', '开始迁移到 v34: 回填缺失的分类图标（二开）');
+            final v34Updated = await ForkCategoryIcons.backfillMissing(this);
+            logger.info('DBMigration', 'v34 迁移完成: 回填 $v34Updated 条分类图标');
           }
         },
         onCreate: (m) async {

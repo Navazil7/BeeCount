@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show compute;
+import 'package:flutter/foundation.dart' show compute, debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers.dart';
+import '../../providers/database_providers.dart';
 import '../../widgets/ui/ui.dart';
 import '../../data/db.dart' as schema;
 import '../../l10n/app_localizations.dart';
@@ -13,6 +14,7 @@ import '../../services/import/parsers/alipay_parser.dart';
 import '../../services/import/parsers/wechat_parser.dart';
 import '../../services/billing/post_processor.dart';
 import '../../services/data_import_service.dart';
+import '../../services/data/fork_category_icons.dart';
 import '../../utils/date_parser.dart';
 import '../../styles/tokens.dart';
 import 'import_page.dart';
@@ -519,6 +521,23 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
       fail = result.failed;
       skipped = skippedTypes.values.fold(0, (a, b) => a + b);
       done = total;
+
+      // ⭐ 二开：回填分类图标。
+      //
+      // 导入器的字段映射表里**没有** category_icon / sub_category_icon 这两个 key
+      // （虽然它有读取它们的代码），所以导入新建的分类 icon 恒为空；而渲染层在
+      // v23 之后已移除 byName 兜底 → 不补的话全 App 都会显示 Icons.category 占位图。
+      // 与 db.dart 的 v34 迁移共用同一套逻辑，幂等、只碰空图标。
+      // 失败不影响导入结果，仅记录日志。
+      try {
+        final iconsFixed =
+            await ForkCategoryIcons.backfillMissing(ref.read(databaseProvider));
+        if (iconsFixed > 0) {
+          debugPrint('[Import] 二开: 已回填 $iconsFixed 条分类图标');
+        }
+      } catch (e) {
+        debugPrint('[Import] 二开: 分类图标回填失败（不影响导入）: $e');
+      }
 
       // 显式触发一次同步上推。SyncCoordinator 监听 local_changes 表已经会
       // 自动调度,这里作为兜底:provider 重建瞬间 / 边界条件下 coordinator

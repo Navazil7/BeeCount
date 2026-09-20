@@ -7,8 +7,24 @@ class BeeTheme {
   static const Color honeyGold = Color(0xFFF8C91C); // 主色（亮色模式）
   static const Color hiveBrown = Color(0xFF8D6E63); // 辅助色
   static const Color energyOrange = Color(0xFFEF6C00); // 点缀色
-  static const Color paperIvory = Color(0xFFFFF8E1); // 背景
+  static const Color paperIvory = Color(0xFFFFF8E1); // 历史遗留：米黄底，已不再使用
   static const Color textDark = Color(0xFF333333); // 文字
+
+  /// ⭐ 页面背景：中性冷灰。与纯白卡片形成层次（对比 1.08:1 的明度差虽小，
+  /// 但足以让卡片"浮"起来）。对标「钱迹」实测页面底色 #F5F6F7。
+  ///
+  /// 取代 paperIvory (#FFF8E1)：米黄底与品牌黄控件叠加会整体发黄、观感昏浊。
+  static const Color pageBg = Color(0xFFF5F6F7);
+
+  /// ⭐ 主色之上的前景色（按钮文字 / FAB 图标）。
+  ///
+  /// 默认主题色 #F8C91C 上的**白字对比度只有 1.57:1**，远低于 WCAG AA 的 4.5:1；
+  /// 深墨色 #2B2B2B 则达 7.5:1。此函数按主色明度自动选择，用户换深色主题时
+  /// 仍能保证可读性。
+  static Color onPrimaryFor(Color primary) =>
+      ThemeData.estimateBrightnessForColor(primary) == Brightness.dark
+          ? Colors.white
+          : const Color(0xFF2B2B2B);
 
   // Brand colors - Dark Mode ⭐ 改为与亮色模式相同（不减弱）
   static const Color honeyGoldDark = honeyGold; // 主色（暗黑模式 - 使用亮色）
@@ -26,20 +42,21 @@ class BeeTheme {
     return base.copyWith(
       colorScheme: base.colorScheme.copyWith(
         primary: honeyGold,
+        onPrimary: onPrimaryFor(honeyGold), // ⭐ 黄底上必须用深色前景（白字仅 1.57:1）
         secondary: energyOrange,
         surface: Colors.white,
       ),
       primaryColor: honeyGold,
-      scaffoldBackgroundColor: paperIvory,
+      scaffoldBackgroundColor: pageBg,
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.white,
         foregroundColor: textDark,
         elevation: 0.0,
         centerTitle: true,
       ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: honeyGold,
-        foregroundColor: Colors.white,
+        foregroundColor: onPrimaryFor(honeyGold), // ⭐ 同步修正 1.57:1 的白字
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         selectedItemColor: energyOrange,
