@@ -860,11 +860,20 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
                       setState(() => _chartSwiped = false);
                       return;
                     }
-                    // 左右滑动切换类型
+                    // ⭐ 二开：整页横滑统一为**切换周期（月/年）**，不再切换收支类型。
+                    //
+                    // 原行为：图表区横滑切周期、图表以外的区域横滑切
+                    // 支出/收入/结余 —— 同一个页面里同样的手势有两种含义，
+                    // 用户横滑想看下个月时会被意外切到"收入"而看到"暂无数据"。
+                    //
+                    // 现在与图表区（bar_chart 的 onSwipeLeft/Right）以及
+                    // 无数据态（下面 _onChartSwipeLeft/Right 的那个分支）保持一致。
+                    // 切换收支类型仍可通过顶部「支出 ▾」下拉或空态的
+                    // 「切换到结余」按钮完成。
                     if (details.primaryVelocity! > 0) {
-                      _cycleTypeBackward();
+                      _onChartSwipeRight(); // 向右滑动 -> 上一个周期
                     } else {
-                      _cycleTypeForward();
+                      _onChartSwipeLeft(); // 向左滑动 -> 下一个周期
                     }
                   },
                   child: ListView(
